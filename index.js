@@ -1,21 +1,41 @@
+const { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes } = require('discord.js');
 const express = require('express');
+
+// --- AYARLAR ---
 const app = express();
+let isGameOpen = true; // Oyunun durumu burada tutuluyor
+
+const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+const TOKEN = 'BOT_TOKEN_BURAYA';
+const CLIENT_ID = 'BOT_ID_BURAYA';
+
+// --- ROBLOX API KISMI ---
+app.get('/check-status', (req, res) => {
+    res.json({ open: isGameOpen });
+});
+
+// --- DISCORD KOMUTLARI ---
+const commands = [
+    new SlashCommandBuilder()
+        .setName('oyun-yonet')
+        .setDescription('Oyunu açar veya kapatır')
+        .addBooleanOption(option => 
+            option.setName('durum')
+            .setDescription('Açık mı kapalı mı?')
+            .setRequired(true))
+].map(command => command.toJSON());
+
+client.on('interactionCreate', async interaction => {
+    if (!interaction.isChatInputCommand()) return;
+
+    if (interaction.commandName === 'oyun-yonet') {
+        const durum = interaction.options.getBoolean('durum');
+        isGameOpen = durum;
+        await interaction.reply(`Oyun durumu güncellendi: **${durum ? 'AÇIK' : 'KAPALI'}**`);
+    }
+});
+
+// --- BAŞLATMA ---
 const PORT = process.env.PORT || 3000;
-
-let gameStatus = false; // Butonun durumu
-
-// 1. BU KISIM: Siteden veya Discord'dan tetiklenecek yer
-app.get('/trigger', (req, res) => {
-    gameStatus = true;
-    res.send("Sinyal Roblox'a gönderilmek üzere sıraya alındı!");
-});
-
-// 2. BU KISIM: Roblox'un sürekli kontrol edeceği yer
-app.get('/check', (req, res) => {
-    res.json({ active: gameStatus });
-    gameStatus = false; // Roblox bilgiyi alınca durumu sıfırla
-});
-
-app.listen(PORT, () => {
-    console.log(`Sunucu ${PORT} portunda çalışıyor.`);
-});
+app.listen(PORT, () => console.log(`API ${PORT} portunda aktif.`));
+client.login(TOKEN);
