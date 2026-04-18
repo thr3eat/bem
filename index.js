@@ -6,7 +6,7 @@ const app = express();
 let isGameOpen = true; // Oyunun durumu burada tutuluyor
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
-const TOKEN = 'MTQ5NTAxNzc5Mjc1NDQxNzY2NA.GleXrj.L0kpTBnqzHlYZ5EG-L-TzwM-17yYcXMejEHiV4';
+const TOKEN = process.env.DISCORD_TOKEN;
 const CLIENT_ID = '1495017792754417664';
 
 // --- ROBLOX API KISMI ---
