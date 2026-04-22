@@ -1,17 +1,9 @@
 const { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes } = require('discord.js');
-const express = require('express');
-
-const app = express();
-app.use(express.json()); // POST isteklerindeki JSON verilerini okuyabilmek için bu satır zorunludur.
-
-// --- DURUM DEĞİŞKENLERİ ---
-let isGameOpen = true; 
-let isMarketOpen = true; 
-let isAdaletSarayOpen = false; // Adalet Sarayı başlangıçta kapalı olarak ayarlandı.
+const { status, startApi } = require('./api'); // api.js dosyasını dahil ettik
+const config = require('./config.json'); // Ayarları dahil ettik
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
-const TOKEN = process.env.DISCORD_TOKEN;
-const CLIENT_ID = '1495017792754417664';
+const TOKEN = process.env.DISCORD_TOKEN; // Render üzerindeki gizli token
 
 // --- KOMUTLARI KAYDETME ---
 const rest = new REST({ version: '10' }).setToken(TOKEN);
@@ -29,54 +21,49 @@ const rest = new REST({ version: '10' }).setToken(TOKEN);
                 .addBooleanOption(opt => opt.setName('durum').setDescription('Açık mı?').setRequired(true))
         ].map(command => command.toJSON());
 
-        await rest.put(Routes.applicationCommands(CLIENT_ID), { body: commands });
+        await rest.put(Routes.applicationCommands(config.CLIENT_ID), { body: commands });
         console.log('Discord komutları başarıyla kaydedildi!');
     } catch (error) {
         console.error('Komutlar kaydedilirken hata oluştu:', error);
     }
 })();
 
-// --- API ÇIKIŞLARI (ROBLOX İÇİN) ---
-
-// 1. Roblox'un tüm durumları kontrol ettiği GET isteği
-app.get('/check-status', (req, res) => {
-    res.json({ 
-        open: isGameOpen, 
-        market: isMarketOpen, 
-        adaletSaray: isAdaletSarayOpen 
-    });
-});
-
-// 2. Roblox Ana Oyun'dan gelen POST isteği ile Adalet Sarayı'nı güncelleme
-app.post('/update-adalet', (req, res) => {
-    const { status } = req.body;
-    
-    // Gelen verinin doğruluğunu kontrol ediyoruz
-    if (typeof status === 'boolean') {
-        isAdaletSarayOpen = status;
-        res.json({ success: true, current: isAdaletSarayOpen });
-        console.log(`Adalet Sarayı durumu güncellendi: ${isAdaletSarayOpen ? 'AÇIK' : 'KAPALI'}`);
-    } else {
-        res.status(400).json({ success: false, error: 'Geçersiz veri tipi. Lütfen true veya false gönderin.' });
-    }
-});
-
-// --- DISCORD ETKİLEŞİMİ ---
+// --- DISCORD ETKİLEŞİMİ VE YETKİ KONTROLÜ ---
 client.on('interactionCreate', async interaction => {
     if (!interaction.isChatInputCommand()) return;
 
+    // 1. SUNUCU KONTROLÜ: Komut doğru sunucuda mı kullanılıyor?
+    if (interaction.guildId !== config.GUILD_ID) {
+        return interaction.reply({ 
+            content: '❌ Bu komut sadece ana sunucumuzda kullanılabilir.', 
+            ephemeral: true // Sadece komutu kullanan kişi bu mesajı görür
+        });
+    }
+
+    // 2. ROL KONTROLÜ: Kullanıcının belirlenen yetki rolü var mı?
+    const hasRole = interaction.member.roles.cache.has(config.REQUIRED_ROLE_ID);
+    if (!hasRole) {
+        return interaction.reply({ 
+            content: '❌ Bu komutu kullanmak için gerekli yetkiye sahip değilsin!', 
+            ephemeral: true 
+        });
+    }
+
+    // YETKİ VARSA İŞLEMLERE DEVAM ET
+    const durum = interaction.options.getBoolean('durum');
+
     if (interaction.commandName === 'oyun-yonet') {
-        isGameOpen = interaction.options.getBoolean('durum');
-        await interaction.reply(`Oyun durumu başarıyla güncellendi: **${isGameOpen ? 'AÇIK' : 'KAPALI'}**`);
+        status.isGameOpen = durum; // api.js içindeki durumu değiştirir
+        await interaction.reply(`Oyun durumu başarıyla güncellendi: **${durum ? 'AÇIK' : 'KAPALI'}**`);
     }
 
     if (interaction.commandName === 'market-yonet') {
-        isMarketOpen = interaction.options.getBoolean('durum');
-        await interaction.reply(`Rütbe Marketi durumu başarıyla güncellendi: **${isMarketOpen ? 'AÇIK' : 'KAPALI'}**`);
+        status.isMarketOpen = durum;
+        await interaction.reply(`Rütbe Marketi durumu başarıyla güncellendi: **${durum ? 'AÇIK' : 'KAPALI'}**`);
     }
 });
 
-// --- SUNUCU BAŞLATMA ---
-const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log(`API ${PORT} portunda aktif.`));
-client.login(TOKEN);
+// Sistemleri Başlat
+const PORT = process.env.PORT || config.PORT;
+startApi(PORT); // Express (Roblox) API'sini başlatır
+client.login(TOKEN); // Discord Botunu başlatır
