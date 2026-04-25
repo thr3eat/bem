@@ -11,7 +11,7 @@ const config = require('./config.json');
 //  ROBLOX GRUP VE API AYARLARI
 // ============================================================
 const ROBLOX_GROUP_ID = 8505535;
-const ROBLOX_COOKIE = process.env.ROBLOX_COOKIE; // Render'da environment variable olarak ekle
+const ROBLOX_COOKIE = (process.env.ROBLOX_COOKIE || '').trim(); // Render'da environment variable olarak ekle
 
 // ============================================================
 //  RÜTBE LİSTESİ — Grup ID: 8505535 (Guest hariç tümü)
@@ -1343,8 +1343,8 @@ client.on('interactionCreate', async interaction => {
         await interaction.deferReply();
 
         // Cookie kontrolü
-        if (!ROBLOX_COOKIE) {
-            return interaction.editReply('❌ ROBLOX_COOKIE environment variable ayarlanmamış! Render\'da ekleyin.');
+        if (!ROBLOX_COOKIE || ROBLOX_COOKIE.length < 50) {
+            return interaction.editReply('❌ ROBLOX_COOKIE environment variable ayarlanmamış veya geçersiz! Render\'da kontrol edin.');
         }
 
         const username = interaction.options.getString('roblox_adi');
