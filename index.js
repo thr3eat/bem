@@ -11,7 +11,7 @@ const config = require('./config.json');
 //  ROBLOX GRUP VE API AYARLARI
 // ============================================================
 const ROBLOX_GROUP_ID = 8505535;
-const ROMANAGER_API_KEY = "0d268477-793e-4b83-8edc-b936a922c866";
+const ROBLOX_COOKIE = process.env.ROBLOX_COOKIE; // Render'da environment variable olarak ekle
 
 // ============================================================
 //  RÜTBE LİSTESİ — Grup ID: 8505535 (Guest hariç tümü)
@@ -116,19 +116,87 @@ async function getUserRankInGroup(userId) {
     }
 }
 
-async function setRobloxRank(userId, rankId) {
-    const response = await fetch(`https://api.romanager.bot/v1/role/${userId}`, {
+// ============================================================
+//  ROBLOX RÜTBE SİSTEMİ — Kendi cookie ile native API
+// ============================================================
+
+// Grup rollerini cache'le (her başlatmada bir kez çekilir)
+let groupRolesCache = null;
+
+async function getGroupRoles() {
+    if (groupRolesCache) return groupRolesCache;
+    try {
+        const response = await fetch(`https://groups.roblox.com/v1/groups/${ROBLOX_GROUP_ID}/roles`, {
+            headers: {
+                'Cookie': `.ROBLOSECURITY=${ROBLOX_COOKIE}`
+            }
+        });
+        if (!response.ok) {
+            throw new Error(`Grup rolleri alınamadı: ${response.status}`);
+        }
+        const data = await response.json();
+        // roles: [ { id: <gerçek role id>, name, rank, memberCount } ]
+        groupRolesCache = data.roles || [];
+        console.log(`[✅] ${groupRolesCache.length} grup rolü yüklendi.`);
+        return groupRolesCache;
+    } catch (err) {
+        console.error('[❌] Grup rolleri çekilirken hata:', err.message);
+        return [];
+    }
+}
+
+// Rank numarasından gerçek Roblox role ID'sini bul
+async function getRoleIdByRank(rankNumber) {
+    const roles = await getGroupRoles();
+    const role = roles.find(r => r.rank === rankNumber);
+    return role ? role.id : null;
+}
+
+// CSRF token al (Roblox API'si POST/PATCH işlemlerinde gerektirir)
+async function getCsrfToken() {
+    try {
+        const response = await fetch('https://auth.roblox.com/v2/logout', {
+            method: 'POST',
+            headers: {
+                'Cookie': `.ROBLOSECURITY=${ROBLOX_COOKIE}`,
+                'Content-Length': '0'
+            }
+        });
+        const token = response.headers.get('x-csrf-token');
+        if (!token) throw new Error('CSRF token alınamadı');
+        return token;
+    } catch (err) {
+        console.error('[❌] CSRF token hatası:', err.message);
+        throw err;
+    }
+}
+
+async function setRobloxRank(userId, rankNumber) {
+    // 1. Rank numarasından gerçek role ID'sini bul
+    const roleId = await getRoleIdByRank(rankNumber);
+    if (!roleId) {
+        throw new Error(`Rank ${rankNumber} için role ID bulunamadı. Grup rolleri cache'ini kontrol edin.`);
+    }
+
+    // 2. CSRF token al
+    const csrfToken = await getCsrfToken();
+
+    // 3. Rütbeyi ata
+    const response = await fetch(`https://groups.roblox.com/v1/groups/${ROBLOX_GROUP_ID}/users/${userId}`, {
         method: 'PATCH',
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': ROMANAGER_API_KEY
+            'Cookie': `.ROBLOSECURITY=${ROBLOX_COOKIE}`,
+            'x-csrf-token': csrfToken
         },
-        body: JSON.stringify({ roleRank: rankId })
+        body: JSON.stringify({ roleId: roleId })
     });
+
     if (!response.ok) {
         const errText = await response.text().catch(() => 'Bilinmeyen hata');
-        throw new Error(`RoManager API Hatası: ${response.status} - ${errText}`);
+        throw new Error(`Roblox API Hatası: ${response.status} - ${errText}`);
     }
+
     return true;
 }
 
@@ -525,11 +593,18 @@ const rest = new REST({ version: '10' }).setToken(TOKEN);
 // ============================================================
 //  READY EVENTİ
 // ============================================================
-client.once('ready', () => {
+client.once('ready', async () => {
     console.log(`[🤖] ${client.user.tag} olarak giriş yapıldı!`);
     console.log(`[📊] ${client.guilds.cache.size} sunucuda aktif.`);
     console.log(`[📋] ${rankList.length} rütbe yüklendi.`);
     client.user.setActivity('Bursa Emniyet Müdürlüğü | /yardim', { type: 4 });
+
+    // Başlangıçta grup rollerini önbelleğe al
+    if (ROBLOX_COOKIE) {
+        await getGroupRoles();
+    } else {
+        console.warn('[⚠️] ROBLOX_COOKIE environment variable bulunamadı! Rütbe komutları çalışmaz.');
+    }
 
     // Geçici ban/mute kontrolü - her dakika çalışır
     setInterval(() => checkExpiredPunishments(client), 60000);
@@ -1267,6 +1342,11 @@ client.on('interactionCreate', async interaction => {
     if (commandName === 'terfi' || commandName === 'tenzil' || commandName === 'rutbedegistir') {
         await interaction.deferReply();
 
+        // Cookie kontrolü
+        if (!ROBLOX_COOKIE) {
+            return interaction.editReply('❌ ROBLOX_COOKIE environment variable ayarlanmamış! Render\'da ekleyin.');
+        }
+
         const username = interaction.options.getString('roblox_adi');
         const robloxUser = await getRobloxUser(username);
 
@@ -1849,7 +1929,7 @@ client.on('guildMemberAdd', async member => {
         const embed = new EmbedBuilder()
             .setColor('#00FF00')
             .setTitle('👋 Yeni Üye!')
-            .setDescription(`**${member.user.tag}** sunucumuza katıldı!\n${interaction?.guild?.name || member.guild.name} ailesine hoş geldin! 🎉`)
+            .setDescription(`**${member.user.tag}** sunucumuza katıldı!\n${member.guild.name} ailesine hoş geldin! 🎉`)
             .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
             .addFields(
                 { name: '🆔 Kullanıcı ID', value: member.user.id, inline: true },
