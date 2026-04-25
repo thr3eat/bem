@@ -2897,7 +2897,7 @@ const PORT = process.env.PORT || config.PORT;
 startApi(PORT);
 client.login(TOKEN).then(() => {
     // Giriş tamamlandıktan sonra karşılama mesajını gönder/kontrol et
-    client.once('ready', () => {
+client.once('clientReady', () => { ... })
         setTimeout(() => kayitKarsilamaMesajiniGonder(client), 3000);
     });
 });
