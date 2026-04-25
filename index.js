@@ -265,7 +265,7 @@ function formatDuration(ms) {
 // ============================================================
 //  YARDIMCI FONKSİYONLAR - EMBED OLUŞTURMA
 // ============================================================
-function buildModEmbed(title, color, fields, footerText = 'Bursa Emniyet Müdürlüğü') {
+function buildModEmbed(title, color, fields, footerText = 'Sentura 🦸 ekoyildiz') {
     return new EmbedBuilder()
         .setColor(color)
         .setTitle(title)
@@ -304,7 +304,7 @@ function buildDMEmbed(action, guildName, moderatorTag, reason, extra = '') {
             { name: '📋 Sebep', value: reason || 'Belirtilmedi', inline: false }
         )
         .setTimestamp()
-        .setFooter({ text: 'Bursa Emniyet Müdürlüğü | İtiraz için yetkililere başvurun.' });
+        .setFooter({ text: 'Sentura 🦸 ekoyildiz | İtiraz için yetkililere başvurun.' });
     if (extra) embed.addFields({ name: '📌 Ek Bilgi', value: extra, inline: false });
     return embed;
 }
@@ -597,7 +597,7 @@ client.once('ready', async () => {
     console.log(`[🤖] ${client.user.tag} olarak giriş yapıldı!`);
     console.log(`[📊] ${client.guilds.cache.size} sunucuda aktif.`);
     console.log(`[📋] ${rankList.length} rütbe yüklendi.`);
-    client.user.setActivity('Bursa Emniyet Müdürlüğü | /yardim', { type: 4 });
+    client.user.setActivity('Sentura 🦸 ekoyildiz | /yardim', { type: 4 });
 
     // Başlangıçta grup rollerini önbelleğe al
     if (ROBLOX_COOKIE) {
@@ -804,14 +804,14 @@ client.on('interactionCreate', async interaction => {
         const embed = new EmbedBuilder()
             .setColor('#0099FF')
             .setTitle('📊 Sistem Durumları')
-            .setDescription('Bursa Emniyet Müdürlüğü sistematik durum paneli')
+            .setDescription('Sentura 🦸 ekoyildiz sistematik durum paneli')
             .addFields(
                 { name: '🎮 Oyun', value: status.isGameOpen ? '🟢 AÇIK' : '🔴 KAPALI', inline: true },
                 { name: '🛒 Rütbe Marketi', value: status.isMarketOpen ? '🟢 AÇIK' : '🔴 KAPALI', inline: true },
                 { name: '⚖️ Adalet Sarayı', value: status.isAdaletSarayOpen ? '🟢 AÇIK' : '🔴 KAPALI', inline: true }
             )
             .setTimestamp()
-            .setFooter({ text: 'Bursa Emniyet Müdürlüğü Sistemleri' });
+            .setFooter({ text: 'Sentura 🦸 ekoyildiz Sistemleri' });
         await interaction.reply({ embeds: [embed] });
         return;
     }
@@ -1169,7 +1169,7 @@ client.on('interactionCreate', async interaction => {
             .addFields(warnFields)
             .setThumbnail(user.displayAvatarURL({ dynamic: true }))
             .setTimestamp()
-            .setFooter({ text: 'Bursa Emniyet Müdürlüğü' });
+            .setFooter({ text: 'Sentura 🦸 ekoyildiz' });
 
         await interaction.reply({ embeds: [embed], ephemeral: true });
         return;
@@ -1227,7 +1227,7 @@ client.on('interactionCreate', async interaction => {
             .addFields(fields)
             .setThumbnail(user.displayAvatarURL({ dynamic: true }))
             .setTimestamp()
-            .setFooter({ text: 'Bursa Emniyet Müdürlüğü' });
+            .setFooter({ text: 'Sentura 🦸 ekoyildiz' });
 
         await interaction.reply({ embeds: [embed], ephemeral: true });
         return;
@@ -1439,7 +1439,7 @@ client.on('interactionCreate', async interaction => {
                 { name: '🆔 Roblox ID', value: String(robloxUser.id), inline: true }
             )
             .setTimestamp()
-            .setFooter({ text: 'Bursa Emniyet Müdürlüğü' });
+            .setFooter({ text: 'Sentura 🦸 ekoyildiz' });
 
         await interaction.editReply({ embeds: [embed] });
         return;
@@ -1455,7 +1455,7 @@ client.on('interactionCreate', async interaction => {
                 .setColor('#0099FF')
                 .setTitle(i === 0 ? '📋 Tüm Rütbe Listesi' : '📋 Rütbe Listesi (devam)')
                 .setDescription(chunk.map(r => `\`ID: ${String(r.id).padStart(2)}\` — **${r.name}**`).join('\n'))
-                .setFooter({ text: `Bursa Emniyet Müdürlüğü | ${rankList.length} rütbe` });
+                .setFooter({ text: `Sentura 🦸 ekoyildiz | ${rankList.length} rütbe` });
             embeds.push(embed);
         }
 
@@ -1489,7 +1489,7 @@ client.on('interactionCreate', async interaction => {
             );
         }
 
-        embed.setTimestamp().setFooter({ text: 'Bursa Emniyet Müdürlüğü' });
+        embed.setTimestamp().setFooter({ text: 'Sentura 🦸 ekoyildiz' });
         await interaction.reply({ embeds: [embed] });
         return;
     }
@@ -1516,7 +1516,7 @@ client.on('interactionCreate', async interaction => {
                 { name: '🌟 Boost', value: `${guild.premiumSubscriptionCount || 0} (Tier ${guild.premiumTier})`, inline: true }
             )
             .setTimestamp()
-            .setFooter({ text: 'Bursa Emniyet Müdürlüğü' });
+            .setFooter({ text: 'Sentura 🦸 ekoyildiz' });
 
         await interaction.reply({ embeds: [embed] });
         return;
@@ -1544,7 +1544,7 @@ client.on('interactionCreate', async interaction => {
                 { name: '📚 discord.js', value: require('discord.js').version, inline: true }
             )
             .setTimestamp()
-            .setFooter({ text: 'Bursa Emniyet Müdürlüğü Sistemleri' });
+            .setFooter({ text: 'Sentura 🦸 ekoyildiz Sistemleri' });
 
         await interaction.reply({ embeds: [embed] });
         return;
@@ -1562,7 +1562,7 @@ client.on('interactionCreate', async interaction => {
                 { name: '🔄 Roundtrip', value: `${roundtrip}ms`, inline: true }
             )
             .setTimestamp()
-            .setFooter({ text: 'Bursa Emniyet Müdürlüğü' });
+            .setFooter({ text: 'Sentura 🦸 ekoyildiz' });
 
         await interaction.editReply({ content: null, embeds: [embed] });
         return;
@@ -1577,7 +1577,7 @@ client.on('interactionCreate', async interaction => {
             .setImage(target.displayAvatarURL({ dynamic: true, size: 1024 }))
             .setDescription(`[PNG](${target.displayAvatarURL({ format: 'png', size: 1024 })}) | [JPG](${target.displayAvatarURL({ format: 'jpg', size: 1024 })}) | [WEBP](${target.displayAvatarURL({ format: 'webp', size: 1024 })})`)
             .setTimestamp()
-            .setFooter({ text: 'Bursa Emniyet Müdürlüğü' });
+            .setFooter({ text: 'Sentura 🦸 ekoyildiz' });
 
         await interaction.reply({ embeds: [embed] });
         return;
@@ -1636,7 +1636,7 @@ client.on('interactionCreate', async interaction => {
             .setDescription(mesaj)
             .addFields({ name: '👮 Gönderen Yetkili', value: interaction.user.tag, inline: true })
             .setTimestamp()
-            .setFooter({ text: 'Bursa Emniyet Müdürlüğü' });
+            .setFooter({ text: 'Sentura 🦸 ekoyildiz' });
 
         const sent = await sendDM(user, embed);
         if (sent) {
@@ -1670,7 +1670,7 @@ client.on('interactionCreate', async interaction => {
             .setDescription(mesaj)
             .addFields({ name: '👮 Gönderen', value: interaction.user.tag, inline: true })
             .setTimestamp()
-            .setFooter({ text: 'Bursa Emniyet Müdürlüğü' });
+            .setFooter({ text: 'Sentura 🦸 ekoyildiz' });
 
         for (const [, member] of members) {
             const sent = await sendDM(member.user, embed);
@@ -1749,7 +1749,7 @@ client.on('interactionCreate', async interaction => {
                 { name: '📅 Oluşturulma', value: `<t:${Math.floor(rol.createdTimestamp / 1000)}:F>`, inline: false }
             )
             .setTimestamp()
-            .setFooter({ text: 'Bursa Emniyet Müdürlüğü' });
+            .setFooter({ text: 'Sentura 🦸 ekoyildiz' });
 
         await interaction.reply({ embeds: [embed] });
         return;
@@ -1937,7 +1937,7 @@ client.on('guildMemberAdd', async member => {
                 { name: '👥 Toplam Üye', value: String(member.guild.memberCount), inline: true }
             )
             .setTimestamp()
-            .setFooter({ text: 'Bursa Emniyet Müdürlüğü' });
+            .setFooter({ text: 'Sentura 🦸 ekoyildiz' });
 
         await channel.send({ embeds: [embed] });
     } catch { /* welcome kanalı yoksa sessizce geç */ }
@@ -1959,7 +1959,7 @@ client.on('guildMemberRemove', async member => {
                 { name: '👥 Kalan Üye', value: String(member.guild.memberCount), inline: true }
             )
             .setTimestamp()
-            .setFooter({ text: 'Bursa Emniyet Müdürlüğü' });
+            .setFooter({ text: 'Sentura 🦸 ekoyildiz' });
 
         await sendLog(client, embed);
     } catch { }
@@ -2059,7 +2059,7 @@ function ekoAboneDMEmbed(member, fotoSayi) {
             { name: '🎭 Kazanılan Rol', value: '⭐ Eko Yıldız Abone', inline: true }
         )
         .setTimestamp()
-        .setFooter({ text: 'Eko Yıldız | Bursa Emniyet Müdürlüğü', iconURL: 'https://cdn.discordapp.com/embed/avatars/0.png' });
+        .setFooter({ text: 'Eko Yıldız | Sentura 🦸 ekoyildiz', iconURL: 'https://cdn.discordapp.com/embed/avatars/0.png' });
 }
 
 // ============================================================
@@ -2076,7 +2076,7 @@ function ekoKanalTebrikEmbed(member, fotoSayi, yeniAbone) {
         .setTitle(baslik)
         .setThumbnail(member.user.displayAvatarURL({ dynamic: true, size: 128 }))
         .setTimestamp()
-        .setFooter({ text: 'Eko Yıldız Otomasyon | Bursa Emniyet Müdürlüğü' });
+        .setFooter({ text: 'Eko Yıldız Otomasyon | Sentura 🦸 ekoyildiz' });
 
     if (yeniAbone) {
         embed.setDescription(`**${member.user.toString()}** aramıza katıldı! ⭐`)
@@ -2275,7 +2275,7 @@ client.on('interactionCreate', async ekoInteraction => {
                 { name: '📆 Tarih', value: bugun, inline: true }
             )
             .setTimestamp()
-            .setFooter({ text: 'Eko Yıldız Otomasyon | Bursa Emniyet Müdürlüğü' });
+            .setFooter({ text: 'Eko Yıldız Otomasyon | Sentura 🦸 ekoyildiz' });
 
         return ekoInteraction.reply({ embeds: [embed], ephemeral: true });
     }
