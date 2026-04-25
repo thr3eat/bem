@@ -2427,7 +2427,6 @@ client.on('interactionCreate', async ekoInteraction => {
 //       .setDescription('Son 100 mesajda fotoğraf paylaşmış herkese Eko Yıldız rolü verir.'),
 //
 // ============================================================
-// ============================================================
 //  EKO YILDIZ — ROBLOX GRUP KAYIT SİSTEMİ
 //  Sunucu  : 1367646464804655104
 //  Kanal   : 1497713387604545768
@@ -2816,9 +2815,89 @@ client.on('messageCreate', async message => {
     }
 });
 
+
+// ============================================================
+//  KAYIT KANALI — SABİT KARŞILAMA MESAJI
+//  Bot başladığında (ve mesaj silinirse) otomatik yazar & sabitleir.
+// ============================================================
+
+// Bot'un gönderdiği karşılama mesajının ID'sini hafızada tut
+let kayitKarsilamaMesajId = null;
+
+const KAYIT_KARSILAMA_ICERIK = [
+    '📌 **Kayıt Nasıl Yapılır?**',
+    '',
+    '1️⃣  Önce aşağıdaki bağlantıdan gruba katılın:',
+    '🔗 https://www.roblox.com/communities/35431216/EkoY-ld-z#!/about',
+    '',
+    '2️⃣  Gruba katıldıktan sonra **Roblox kullanıcı adınızı** bu kanala yazın.',
+    '',
+    '3️⃣  Bot sizi otomatik olarak doğrulayacak ve özel rolü verecek! 🎉',
+].join('\n');
+
+async function kayitKarsilamaMesajiniGonder(client) {
+    try {
+        const guild  = await client.guilds.fetch(KAYIT_GUILD_ID).catch(() => null);
+        if (!guild) return;
+        const kanal  = await guild.channels.fetch(KAYIT_KANAL_ID).catch(() => null);
+        if (!kanal)  return;
+
+        // Kanalın son mesajlarını tara — botun daha önce gönderdiği mesaj var mı?
+        const mesajlar = await kanal.messages.fetch({ limit: 50 }).catch(() => null);
+        if (mesajlar) {
+            const mevcutMesaj = mesajlar.find(
+                m => m.author.id === client.user.id && m.pinned && m.content === KAYIT_KARSILAMA_ICERIK
+            );
+            if (mevcutMesaj) {
+                // Zaten var, ID'yi hafızaya al
+                kayitKarsilamaMesajId = mevcutMesaj.id;
+                console.log('[📌 KAYIT] Karşılama mesajı zaten mevcut, izleniyor.');
+                return;
+            }
+        }
+
+        // Yoksa gönder
+        const yeniMesaj = await kanal.send(KAYIT_KARSILAMA_ICERIK);
+        kayitKarsilamaMesajId = yeniMesaj.id;
+
+        // Sabitle
+        await yeniMesaj.pin().catch(() => {});
+        console.log('[📌 KAYIT] Karşılama mesajı gönderildi ve sabitlendi.');
+
+        // Discord'un "bu mesaj sabitlendi" sistem bildirimini sil
+        setTimeout(async () => {
+            const sonMesajlar = await kanal.messages.fetch({ limit: 5 }).catch(() => null);
+            if (sonMesajlar) {
+                const sistemMesaji = sonMesajlar.find(m => m.system && m.type === 6);
+                if (sistemMesaji) await sistemMesaji.delete().catch(() => {});
+            }
+        }, 3000);
+
+    } catch (err) {
+        console.error('[❌ KAYIT] Karşılama mesajı gönderilemedi:', err.message);
+    }
+}
+
+// Mesaj silinirse tekrar gönder
+client.on('messageDelete', async deletedMessage => {
+    if (!kayitKarsilamaMesajId) return;
+    if (deletedMessage.channelId !== KAYIT_KANAL_ID) return;
+    if (deletedMessage.id !== kayitKarsilamaMesajId) return;
+
+    console.log('[⚠️ KAYIT] Karşılama mesajı silindi, yeniden gönderiliyor...');
+    kayitKarsilamaMesajId = null;
+    // 2 saniye bekle sonra yeniden gönder
+    setTimeout(() => kayitKarsilamaMesajiniGonder(client), 2000);
+});
+
 // ============================================================
 //  BAŞLATMA
 // ============================================================
 const PORT = process.env.PORT || config.PORT;
 startApi(PORT);
-client.login(TOKEN);
+client.login(TOKEN).then(() => {
+    // Giriş tamamlandıktan sonra karşılama mesajını gönder/kontrol et
+    client.once('ready', () => {
+        setTimeout(() => kayitKarsilamaMesajiniGonder(client), 3000);
+    });
+});
