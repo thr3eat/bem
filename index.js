@@ -6,7 +6,7 @@ const config = require('./config.json');
 const ROBLOX_GROUP_ID = 8505535;
 const ROMANAGER_API_KEY = "0d268477-793e-4b83-8edc-b936a922c866";
 
-// Rütbe Hiyerarşisi (Sıralı)
+// Rütbe Hiyerarşisi (Sıralı 28 Rütbe)
 const rankList = [
     { name: "Akademi Adayı", id: 1 }, { name: "Akademi", id: 3 }, { name: "Polis Memuru Adayı", id: 6 },
     { name: "Polis Memuru", id: 7 }, { name: "Kıdemli Polis Memuru", id: 8 }, { name: "Başpolis Memuru Adayı", id: 9 },
@@ -39,7 +39,7 @@ async function getUserRankInGroup(userId) {
         const group = data.data.find(g => g.group.id === ROBLOX_GROUP_ID);
         if (group) return group.role.rank;
     }
-    return 0; // Grupta değilse 0 döner
+    return 0; 
 }
 
 async function setRobloxRank(userId, rankId) {
@@ -55,7 +55,6 @@ async function setRobloxRank(userId, rankId) {
     return true;
 }
 
-// Bot Başlatma
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] });
 const TOKEN = process.env.DISCORD_TOKEN; 
 
@@ -65,7 +64,6 @@ const rest = new REST({ version: '10' }).setToken(TOKEN);
 (async () => {
     try {
         const commands = [
-            // Oyun Yönetim Komutları
             new SlashCommandBuilder().setName('oyun-yonet').setDescription('Oyunu açar veya kapatır.')
                 .addBooleanOption(opt => opt.setName('durum').setDescription('Açık mı?').setRequired(true)),
             new SlashCommandBuilder().setName('market-yonet').setDescription('Rütbe marketini açar veya kapatır.')
@@ -73,7 +71,6 @@ const rest = new REST({ version: '10' }).setToken(TOKEN);
             new SlashCommandBuilder().setName('tumunu-ac').setDescription('Oyun, Market ve Adalet Sarayını aynı anda açar.'),
             new SlashCommandBuilder().setName('tumunu-kapat').setDescription('Tüm sistemleri aynı anda kapatır.'),
             
-            // Moderasyon Komutları
             new SlashCommandBuilder().setName('ban').setDescription('Kullanıcıyı sunucudan yasaklar.')
                 .addUserOption(opt => opt.setName('kullanici').setDescription('Banlanacak kişi').setRequired(true))
                 .addStringOption(opt => opt.setName('sebep').setDescription('Ban sebebi').setRequired(true)),
@@ -84,14 +81,15 @@ const rest = new REST({ version: '10' }).setToken(TOKEN);
                 .addUserOption(opt => opt.setName('kullanici').setDescription('Susturulacak kişi').setRequired(true))
                 .addStringOption(opt => opt.setName('sebep').setDescription('Susturma sebebi').setRequired(false)),
                 
-            // Roblox Rütbe Yönetimi
             new SlashCommandBuilder().setName('terfi').setDescription('Kullanıcıyı bir üst rütbeye terfi ettirir.')
                 .addStringOption(opt => opt.setName('roblox_adi').setDescription('Roblox kullanıcı adı').setRequired(true)),
             new SlashCommandBuilder().setName('tenzil').setDescription('Kullanıcıyı bir alt rütbeye düşürür.')
                 .addStringOption(opt => opt.setName('roblox_adi').setDescription('Roblox kullanıcı adı').setRequired(true)),
-            new SlashCommandBuilder().setName('rutbedegistir').setDescription('Kullanıcıya belirli bir rütbe atar.')
+            
+            // DİKKAT: Rütbe değiştir komutunda ID yazmak yerine Otomatik Tamamlama (Autocomplete) açtık!
+            new SlashCommandBuilder().setName('rutbedegistir').setDescription('Kullanıcıya listeden bir rütbe atar.')
                 .addStringOption(opt => opt.setName('roblox_adi').setDescription('Roblox kullanıcı adı').setRequired(true))
-                .addIntegerOption(opt => opt.setName('rutbe_id').setDescription('Verilecek Rütbenin ID numarası (Örn: 22)').setRequired(true))
+                .addIntegerOption(opt => opt.setName('rutbe_id').setDescription('Atanacak rütbeyi listeden seçin (Yazarak arayabilirsiniz)').setRequired(true).setAutocomplete(true))
         ].map(command => command.toJSON());
 
         await rest.put(Routes.applicationCommands(config.CLIENT_ID), { body: commands });
@@ -103,14 +101,27 @@ const rest = new REST({ version: '10' }).setToken(TOKEN);
 
 // --- DISCORD ETKİLEŞİMİ VE YETKİ KONTROLÜ ---
 client.on('interactionCreate', async interaction => {
+    
+    // === 1. AUTOCOMPLETE (Açılır Liste Arama Sistemi) ===
+    if (interaction.isAutocomplete()) {
+        const focusedValue = interaction.options.getFocused();
+        // Yazılan kelimeye göre listedeki rütbeleri filtreler
+        const filtered = rankList.filter(choice => choice.name.toLowerCase().includes(focusedValue.toLowerCase()));
+        
+        // Discord kuralları gereği ekranda max 25 sonuç gösterebiliriz, bu yüzden slice(0,25) kullanıyoruz
+        await interaction.respond(
+            filtered.slice(0, 25).map(choice => ({ name: choice.name, value: choice.id }))
+        );
+        return;
+    }
+
+    // Normal komutlar için devam et
     if (!interaction.isChatInputCommand()) return;
 
-    // 1. SUNUCU KONTROLÜ
     if (interaction.guildId !== config.GUILD_ID) {
         return interaction.reply({ content: '❌ Bu komut sadece ana sunucumuzda kullanılabilir.', ephemeral: true });
     }
 
-    // 2. ROL KONTROLÜ
     const hasRole = interaction.member.roles.cache.has(config.REQUIRED_ROLE_ID);
     if (!hasRole) {
         return interaction.reply({ content: '❌ Bu komutu kullanmak için yetkiniz yok!', ephemeral: true });
@@ -120,7 +131,7 @@ client.on('interactionCreate', async interaction => {
 
     // === ROBLOX RÜTBE SİSTEMLERİ ===
     if (command === 'terfi' || command === 'tenzil' || command === 'rutbedegistir') {
-        await interaction.deferReply(); // Roblox API'si yavaş olabilir, botu bekletiyoruz.
+        await interaction.deferReply(); 
 
         const username = interaction.options.getString('roblox_adi');
         const robloxUser = await getRobloxUser(username);
@@ -151,14 +162,15 @@ client.on('interactionCreate', async interaction => {
                 newRankObj = rankList[currentIndex - 1];
             } 
             else if (command === 'rutbedegistir') {
+                // Kullanıcı listeden rütbenin adını seçer ama biz kodda seçtiği rütbenin değerini (value = ID) alırız.
                 const requestedId = interaction.options.getInteger('rutbe_id');
                 newRankObj = rankList.find(r => r.id === requestedId);
+                
                 if (!newRankObj) {
-                    return interaction.editReply(`❌ Belirtilen Rütbe ID'si geçersiz. Lütfen doğru bir ID girin.`);
+                    return interaction.editReply(`❌ Geçersiz bir rütbe seçimi yapıldı.`);
                 }
             }
 
-            // RoManager API İle Rütbeyi Uygula
             await setRobloxRank(robloxUser.id, newRankObj.id);
 
             const embed = new EmbedBuilder()
@@ -166,7 +178,7 @@ client.on('interactionCreate', async interaction => {
                 .setTitle('👮 Rütbe Güncellemesi Başarılı')
                 .addFields(
                     { name: '👤 Kullanıcı', value: robloxUser.name, inline: true },
-                    { name: '🔄 Yeni Rütbe', value: `${newRankObj.name} (ID: ${newRankObj.id})`, inline: true }
+                    { name: '🔄 Yeni Rütbe', value: `${newRankObj.name}`, inline: true }
                 )
                 .setTimestamp()
                 .setFooter({ text: 'Bursa Emniyet Müdürlüğü Sistemleri' });
@@ -219,7 +231,7 @@ client.on('interactionCreate', async interaction => {
             .setDescription(`**${reason}** sebebiyle **${interaction.guild.name}** sunucusundan ${actionText}.. Baybay!`)
             .setTimestamp();
 
-        try { await user.send({ embeds: [dmEmbed] }); } catch (error) { /* DM Kapalıysa Yoksay */ }
+        try { await user.send({ embeds: [dmEmbed] }); } catch (error) { }
 
         try {
             if (command === 'ban') {
@@ -230,7 +242,7 @@ client.on('interactionCreate', async interaction => {
                 await interaction.reply(`👢 **${user.tag}** sunucudan başarıyla atıldı. Sebep: ${reason}`);
             }
         } catch (error) {
-            await interaction.reply({ content: 'Bunu yapmaya yetkim yok! (Botun rolü, yasaklanacak kişinin rolünden üstte olmalı)', ephemeral: true });
+            await interaction.reply({ content: 'Bunu yapmaya yetkim yok!', ephemeral: true });
         }
     }
     else if (command === 'mute') {
@@ -241,7 +253,7 @@ client.on('interactionCreate', async interaction => {
         if (!member) return interaction.reply({ content: 'Bu kullanıcı sunucuda bulunamadı!', ephemeral: true });
 
         const muteRole = interaction.guild.roles.cache.get(config.MUTE_ROLE_ID);
-        if (!muteRole) return interaction.reply({ content: '❌ Susturulmuş rolü bulunamadı. config.json ID\'sini kontrol edin.', ephemeral: true });
+        if (!muteRole) return interaction.reply({ content: '❌ Susturulmuş rolü bulunamadı.', ephemeral: true });
 
         try {
             await member.roles.add(muteRole, reason);
