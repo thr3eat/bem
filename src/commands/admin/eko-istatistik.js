@@ -1,17 +1,26 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const {
+    SlashCommandBuilder,
+    ContainerBuilder,
+    TextDisplayBuilder,
+    SeparatorBuilder,
+    SeparatorSpacingSize,
+    MessageFlags,
+} = require('discord.js');
 const { ekoDailyStats, ekoAbonerDatabase, ekoCooldownSet, EKO_GUILD_ID, EKO_ROL_ID } = require('../../modules/ekoUtils');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('eko-istatistik')
         .setDescription('Eko Yıldız abone istatistiklerini gösterir.'),
-    async execute(interaction, client) {
-        if (interaction.guildId !== EKO_GUILD_ID) return interaction.reply({ content: '❌ Bu komut sadece Eko sunucusunda kullanılabilir.', flags: 64 });
 
-        const bugun = new Date().toISOString().slice(0, 10);
+    async execute(interaction, client) {
+        if (interaction.guildId !== EKO_GUILD_ID)
+            return interaction.reply({ content: '❌ Bu komut sadece Eko sunucusunda kullanılabilir.', flags: 64 });
+
+        const bugun      = new Date().toISOString().slice(0, 10);
         const gunlukFoto = ekoDailyStats.get(bugun) || 0;
         const toplamAbone = ekoAbonerDatabase.size;
-        const toplamFoto = [...ekoAbonerDatabase.values()].reduce((t, u) => t + (u.totalPhotos || 0), 0);
+        const toplamFoto  = [...ekoAbonerDatabase.values()].reduce((t, u) => t + (u.totalPhotos || 0), 0);
 
         let rolUyeSayisi = 0;
         try {
@@ -22,20 +31,36 @@ module.exports = {
             }
         } catch {}
 
-        const embed = new EmbedBuilder()
-            .setColor('#FFD700')
-            .setTitle('⭐ Eko Yıldız — İstatistikler')
-            .addFields(
-                { name: '👥 Toplam Abone (Rol)', value: String(rolUyeSayisi), inline: true },
-                { name: '📊 Takip Edilen Kullanıcı', value: String(toplamAbone), inline: true },
-                { name: '📸 Toplam Fotoğraf', value: String(toplamFoto), inline: true },
-                { name: '📅 Bugünkü Fotoğraf', value: String(gunlukFoto), inline: true },
-                { name: '🕐 Cooldown\'daki Kişi', value: String(ekoCooldownSet.size), inline: true },
-                { name: '📆 Tarih', value: bugun, inline: true }
+        const container = new ContainerBuilder()
+            .setAccentColor(0xFFD700)
+            .addTextDisplayComponents(
+                new TextDisplayBuilder().setContent('## ⭐ Eko Yıldız — İstatistikler')
             )
-            .setTimestamp()
-            .setFooter({ text: 'Eko Yıldız Otomasyon' });
+            .addSeparatorComponents(
+                new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small).setDivider(true)
+            )
+            .addTextDisplayComponents(
+                new TextDisplayBuilder().setContent(
+                    `👥 **Toplam Abone (Rol)** — ${rolUyeSayisi}\n` +
+                    `📊 **Takip Edilen Kullanıcı** — ${toplamAbone}\n` +
+                    `📸 **Toplam Fotoğraf** — ${toplamFoto}\n` +
+                    `📅 **Bugünkü Fotoğraf** — ${gunlukFoto}\n` +
+                    `🕐 **Cooldown'daki Kişi** — ${ekoCooldownSet.size}\n` +
+                    `📆 **Tarih** — ${bugun}`
+                )
+            )
+            .addSeparatorComponents(
+                new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small).setDivider(false)
+            )
+            .addTextDisplayComponents(
+                new TextDisplayBuilder().setContent(
+                    `-# Eko Yıldız Otomasyon • <t:${Math.floor(Date.now() / 1000)}:R>`
+                )
+            );
 
-        await interaction.reply({ embeds: [embed] });
+        await interaction.reply({
+            components: [container],
+            flags: MessageFlags.IsComponentsV2,
+        });
     },
 };

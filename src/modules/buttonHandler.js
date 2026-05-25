@@ -1,10 +1,22 @@
-const { EmbedBuilder } = require('discord.js');
+const {
+    EmbedBuilder,
+    ContainerBuilder,
+    TextDisplayBuilder,
+    SeparatorBuilder,
+    SeparatorSpacingSize,
+    ActionRowBuilder,
+    ButtonBuilder,
+    ButtonStyle,
+    PermissionFlagsBits,
+    MessageFlags,
+} = require('discord.js');
 
 const pollVotes = new Map(); // messageId -> { yes: Set, no: Set }
 
 async function handleButtonInteraction(interaction, client) {
     const { customId, message } = interaction;
 
+    // ─── ANKET BUTONLARI ───────────────────────────────────────────────────────
     if (customId === 'poll_yes' || customId === 'poll_no' || customId === 'poll_results') {
         if (!pollVotes.has(message.id)) {
             pollVotes.set(message.id, { yes: new Set(), no: new Set() });
@@ -32,104 +44,85 @@ async function handleButtonInteraction(interaction, client) {
         }
 
         if (customId === 'poll_results') {
-            const total = votes.yes.size + votes.no.size;
+            const total      = votes.yes.size + votes.no.size;
             const yesPercent = total > 0 ? Math.round((votes.yes.size / total) * 100) : 0;
-            const noPercent = total > 0 ? Math.round((votes.no.size / total) * 100) : 0;
+            const noPercent  = total > 0 ? Math.round((votes.no.size  / total) * 100) : 0;
             const yesBar = '█'.repeat(Math.round(yesPercent / 10)) + '░'.repeat(10 - Math.round(yesPercent / 10));
-            const noBar = '█'.repeat(Math.round(noPercent / 10)) + '░'.repeat(10 - Math.round(noPercent / 10));
+            const noBar  = '█'.repeat(Math.round(noPercent  / 10)) + '░'.repeat(10 - Math.round(noPercent  / 10));
+
+            const container = new ContainerBuilder()
+                .setAccentColor(0x5865F2)
+                .addTextDisplayComponents(
+                    new TextDisplayBuilder().setContent('## 📊 Anket Sonuçları')
+                )
+                .addSeparatorComponents(
+                    new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small).setDivider(true)
+                )
+                .addTextDisplayComponents(
+                    new TextDisplayBuilder().setContent(
+                        `✅ **Evet** — ${votes.yes.size} oy (${yesPercent}%)\n\`${yesBar}\`\n\n` +
+                        `❌ **Hayır** — ${votes.no.size} oy (${noPercent}%)\n\`${noBar}\`\n\n` +
+                        `🔢 **Toplam Oy** — ${total}`
+                    )
+                );
 
             return interaction.reply({
-                embeds: [
-                    new EmbedBuilder()
-                        .setColor('#5865F2')
-                        .setTitle('📊 Anket Sonuçları')
-                        .addFields(
-                            { name: `✅ Evet — ${votes.yes.size} oy (${yesPercent}%)`, value: `\`${yesBar}\``, inline: false },
-                            { name: `❌ Hayır — ${votes.no.size} oy (${noPercent}%)`, value: `\`${noBar}\``, inline: false },
-                            { name: '🔢 Toplam Oy', value: String(total), inline: true }
-                        )
-                        .setTimestamp()
-                ],
-                flags: 64
+                components: [container],
+                flags: MessageFlags.IsComponentsV2 | 64,
             });
         }
     }
 
-    // --- SİSTEM KONTROL PANELİ BUTONLARI ---
+    // ─── SİSTEM KONTROL PANELİ BUTONLARI ──────────────────────────────────────
     if (customId.startsWith('btn_toggle_') || customId.startsWith('btn_all_')) {
         const { status } = require('../../api');
         const { buildModEmbed, sendLog } = require('./embedBuilders');
-        const { ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits } = require('discord.js');
+        const { buildSistemKontrolV2 } = require('../commands/admin/sistem-kontrol');
 
-        // Yetki kontrolü (Sadece yetkililer basabilsin)
         if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
             return interaction.reply({ content: '❌ Bu butonları kullanmak için yeterli yetkiniz yok!', flags: 64 });
         }
 
         let systemName = '';
-        let newState = false;
+        let newState   = false;
 
         if (customId === 'btn_toggle_game') {
             status.isGameOpen = !status.isGameOpen;
-            newState = status.isGameOpen;
+            newState   = status.isGameOpen;
             systemName = 'Ana Oyun Girişleri';
         } else if (customId === 'btn_toggle_market') {
             status.isMarketOpen = !status.isMarketOpen;
-            newState = status.isMarketOpen;
+            newState   = status.isMarketOpen;
             systemName = 'Rütbe Market';
         } else if (customId === 'btn_toggle_adalet') {
             status.isAdaletSarayOpen = !status.isAdaletSarayOpen;
-            newState = status.isAdaletSarayOpen;
+            newState   = status.isAdaletSarayOpen;
             systemName = 'Adalet Sarayı';
         } else if (customId === 'btn_all_open') {
-            status.isGameOpen = true;
-            status.isMarketOpen = true;
-            status.isAdaletSarayOpen = true;
+            status.isGameOpen = status.isMarketOpen = status.isAdaletSarayOpen = true;
             systemName = 'Tüm Sistemler';
-            newState = true;
+            newState   = true;
         } else if (customId === 'btn_all_close') {
-            status.isGameOpen = false;
-            status.isMarketOpen = false;
-            status.isAdaletSarayOpen = false;
+            status.isGameOpen = status.isMarketOpen = status.isAdaletSarayOpen = false;
             systemName = 'Tüm Sistemler';
-            newState = false;
+            newState   = false;
         }
 
-        // Güncellenmiş Embed ve Butonları Oluştur
-        const embed = new EmbedBuilder()
-            .setColor('#2B2D31')
-            .setTitle('🎛️ Eko Yıldız Sistem Kontrol Paneli')
-            .setDescription('Aşağıdaki butonları kullanarak Roblox oyun sistemlerini aktif veya pasif hale getirebilirsiniz. Bu paneldeki değişiklikler **anında** oyuna yansıyacaktır.')
-            .addFields(
-                { name: '🎮 Ana Oyun Girişleri', value: status.isGameOpen ? '🟢 **AÇIK**' : '🔴 **KAPALI**', inline: true },
-                { name: '🛒 Rütbe Market', value: status.isMarketOpen ? '🟢 **AÇIK**' : '🔴 **KAPALI**', inline: true },
-                { name: '⚖️ Adalet Sarayı', value: status.isAdaletSarayOpen ? '🟢 **AÇIK**' : '🔴 **KAPALI**', inline: true }
-            )
-            .setImage('https://i.imgur.com/B9B1vFm.png')
-            .setFooter({ text: `Son işlem: ${interaction.user.tag}`, iconURL: interaction.user.displayAvatarURL() })
-            .setTimestamp();
-
-        const row1 = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('btn_toggle_game').setLabel('Oyun Girişleri').setEmoji('🎮').setStyle(status.isGameOpen ? ButtonStyle.Success : ButtonStyle.Danger),
-            new ButtonBuilder().setCustomId('btn_toggle_market').setLabel('Rütbe Market').setEmoji('🛒').setStyle(status.isMarketOpen ? ButtonStyle.Success : ButtonStyle.Danger),
-            new ButtonBuilder().setCustomId('btn_toggle_adalet').setLabel('Adalet Sarayı').setEmoji('⚖️').setStyle(status.isAdaletSarayOpen ? ButtonStyle.Success : ButtonStyle.Danger)
-        );
-
-        const row2 = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('btn_all_open').setLabel('Tümünü Aç').setEmoji('✅').setStyle(ButtonStyle.Primary),
-            new ButtonBuilder().setCustomId('btn_all_close').setLabel('Tümünü Kapat').setEmoji('❌').setStyle(ButtonStyle.Secondary)
-        );
-
-        await interaction.update({ embeds: [embed], components: [row1, row2] });
+        // Paneli Components V2 ile güncelle
+        const container = buildSistemKontrolV2(interaction);
+        await interaction.update({
+            components: [container],
+            flags: MessageFlags.IsComponentsV2,
+        });
 
         // Mod log gönder
         const logEmbed = buildModEmbed(
             newState ? '🟢 Sistem Aktif Edildi' : '🔴 Sistem Kapatıldı',
             newState ? '#00FF00' : '#FF0000',
             [
-                { name: '⚙️ Sistem', value: systemName, inline: true },
-                { name: '📊 Durum', value: newState ? '**AÇIK**' : '**KAPALI**', inline: true },
-                { name: '👮 Yetkili', value: interaction.user.tag, inline: true }
+                { name: '⚙️ Sistem',  value: systemName,                    inline: true },
+                { name: '📊 Durum',   value: newState ? '**AÇIK**' : '**KAPALI**', inline: true },
+                { name: '👮 Yetkili', value: interaction.user.tag,           inline: true },
             ]
         );
         await sendLog(client, logEmbed);

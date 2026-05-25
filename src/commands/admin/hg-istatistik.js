@@ -1,4 +1,12 @@
-const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
+const {
+    SlashCommandBuilder,
+    PermissionFlagsBits,
+    ContainerBuilder,
+    TextDisplayBuilder,
+    SeparatorBuilder,
+    SeparatorSpacingSize,
+    MessageFlags,
+} = require('discord.js');
 const { hgIstatistik, hgGunlukSifirla } = require('../../modules/stats');
 const { YOUTUBE_ABONE_LINK, YOUTUBE_UYE_LINK } = require('../../modules/constants');
 
@@ -7,22 +15,46 @@ module.exports = {
         .setName('hg-istatistik')
         .setDescription('Hoşgeldin sisteminin istatistiklerini gösterir.')
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
-    async execute(interaction, client) {
+
+    async execute(interaction) {
         hgGunlukSifirla();
 
-        const embed = new EmbedBuilder()
-            .setColor('#FFD700')
-            .setTitle('👋 Hoşgeldin Sistemi — İstatistikler')
-            .addFields(
-                { name: '👥 Toplam Katılan (Bu Oturum)', value: String(hgIstatistik.toplamKatilan), inline: true },
-                { name: '📅 Bugün Katılan', value: String(hgIstatistik.bugunKatilan), inline: true },
-                { name: '🏰 Mevcut Üye Sayısı', value: String(interaction.guild.memberCount), inline: true },
-                { name: '📺 YouTube Abone Linki', value: `[Abone Ol!](${YOUTUBE_ABONE_LINK})`, inline: true },
-                { name: '💎 YouTube Üyelik Linki', value: `[Üye Ol!](${YOUTUBE_UYE_LINK})`, inline: true },
+        const container = new ContainerBuilder()
+            .setAccentColor(0xFFD700)
+            .addTextDisplayComponents(
+                new TextDisplayBuilder().setContent('## 👋 Hoşgeldin Sistemi — İstatistikler')
             )
-            .setTimestamp()
-            .setFooter({ text: 'Eko Yıldız Hoşgeldin Sistemi' });
+            .addSeparatorComponents(
+                new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small).setDivider(true)
+            )
+            .addTextDisplayComponents(
+                new TextDisplayBuilder().setContent(
+                    `👥 **Toplam Katılan (Bu Oturum)** — ${hgIstatistik.toplamKatilan}\n` +
+                    `📅 **Bugün Katılan** — ${hgIstatistik.bugunKatilan}\n` +
+                    `🏰 **Mevcut Üye Sayısı** — ${interaction.guild.memberCount}`
+                )
+            )
+            .addSeparatorComponents(
+                new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small).setDivider(true)
+            )
+            .addTextDisplayComponents(
+                new TextDisplayBuilder().setContent(
+                    `📺 **YouTube Abone Linki** — [Abone Ol!](${YOUTUBE_ABONE_LINK})\n` +
+                    `💎 **YouTube Üyelik Linki** — [Üye Ol!](${YOUTUBE_UYE_LINK})`
+                )
+            )
+            .addSeparatorComponents(
+                new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small).setDivider(false)
+            )
+            .addTextDisplayComponents(
+                new TextDisplayBuilder().setContent(
+                    `-# Eko Yıldız Hoşgeldin Sistemi • <t:${Math.floor(Date.now() / 1000)}:R>`
+                )
+            );
 
-        await interaction.reply({ embeds: [embed], flags: 64 });
+        await interaction.reply({
+            components: [container],
+            flags: MessageFlags.IsComponentsV2 | 64,
+        });
     },
 };

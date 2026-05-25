@@ -1,35 +1,65 @@
-const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
+const {
+    SlashCommandBuilder,
+    PermissionFlagsBits,
+    ContainerBuilder,
+    TextDisplayBuilder,
+    SeparatorBuilder,
+    SeparatorSpacingSize,
+    MessageFlags,
+} = require('discord.js');
 const { getUserWarnings } = require('../../modules/moderationUtils');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('warnlist')
         .setDescription('Kullanıcının uyarılarını listeler.')
-        .addUserOption(opt => opt.setName('kullanici').setDescription('Uyarıları görülecek kişi').setRequired(true))
+        .addUserOption(opt =>
+            opt.setName('kullanici').setDescription('Uyarıları görülecek kişi').setRequired(true)
+        )
         .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers),
-    async execute(interaction, client) {
-        const user = interaction.options.getUser('kullanici');
+
+    async execute(interaction) {
+        const user  = interaction.options.getUser('kullanici');
         const warns = getUserWarnings(user.id);
 
         if (warns.length === 0) {
-            return interaction.reply({ content: `✅ **${user.tag}** adlı kullanıcının hiç uyarısı yok.`, flags: 64 });
+            return interaction.reply({
+                content: `✅ **${user.tag}** adlı kullanıcının hiç uyarısı yok.`,
+                flags: 64,
+            });
         }
 
-        const warnFields = warns.slice(0, 25).map((w, i) => ({
-            name: `⚠️ Uyarı #${i + 1} — ${new Date(w.timestamp).toLocaleDateString('tr-TR')}`,
-            value: `**Sebep:** ${w.reason}\n**Yetkili ID:** ${w.moderatorId}`,
-            inline: false
-        }));
+        const warnLines = warns.slice(0, 25).map((w, i) =>
+            `**${i + 1}.** ⚠️ ${new Date(w.timestamp).toLocaleDateString('tr-TR')}\n` +
+            `> 📋 ${w.reason}\n` +
+            `> 👮 <@${w.moderatorId}>`
+        ).join('\n\n');
 
-        const embed = new EmbedBuilder()
-            .setColor('#FFFF00')
-            .setTitle(`⚠️ Uyarı Listesi — ${user.tag}`)
-            .setDescription(`Toplam **${warns.length}** uyarı`)
-            .addFields(warnFields)
-            .setThumbnail(user.displayAvatarURL({ dynamic: true }))
-            .setTimestamp()
-            .setFooter({ text: 'Sentura 🦸 ekoyildiz' });
+        const container = new ContainerBuilder()
+            .setAccentColor(0xFFFF00)
+            .addTextDisplayComponents(
+                new TextDisplayBuilder().setContent(
+                    `## ⚠️ Uyarı Listesi — ${user.tag}\nToplam **${warns.length}** uyarı`
+                )
+            )
+            .addSeparatorComponents(
+                new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small).setDivider(true)
+            )
+            .addTextDisplayComponents(
+                new TextDisplayBuilder().setContent(warnLines)
+            )
+            .addSeparatorComponents(
+                new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small).setDivider(false)
+            )
+            .addTextDisplayComponents(
+                new TextDisplayBuilder().setContent(
+                    `-# Sentura 🦸 ekoyildiz • <t:${Math.floor(Date.now() / 1000)}:R>`
+                )
+            );
 
-        await interaction.reply({ embeds: [embed], flags: 64 });
+        await interaction.reply({
+            components: [container],
+            flags: MessageFlags.IsComponentsV2 | 64,
+        });
     },
 };
