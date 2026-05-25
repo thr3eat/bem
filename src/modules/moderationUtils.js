@@ -32,6 +32,14 @@ function addModCase(type, userId, moderatorId, reason) {
 }
 
 // ============================================================
+//  MODLOG QUERY
+// ============================================================
+function getModCases(userId) {
+    const all = modlogDb.all();
+    return Object.values(all).filter(c => c.userId === userId);
+}
+
+// ============================================================
 //  WARNING SYSTEM
 // ============================================================
 function getUserWarnings(userId) {
@@ -130,13 +138,24 @@ module.exports = {
     // Databases (Exposing for direct access where needed)
     warnDatabase: { get: (id) => warnDb.get(id), set: (id, val) => warnDb.set(id, val), delete: (id) => warnDb.delete(id) },
     modlogDatabase: { all: () => modlogDb.all() },
-    tempbanDatabase: { set: (id, val) => tempbanDb.set(id, val), delete: (id) => tempbanDb.delete(id), entries: () => Object.entries(tempbanDb.all()) },
-    tempmuteDatabase: { set: (id, val) => tempmuteDb.set(id, val), delete: (id) => tempmuteDb.delete(id), entries: () => Object.entries(tempmuteDb.all()) },
+    tempbanDatabase: {
+        set: (id, val) => tempbanDb.set(id, val),
+        delete: (id) => tempbanDb.delete(id),
+        entries: () => Object.entries(tempbanDb.all()),
+        get: (id) => tempbanDb.get(id),
+    },
+    tempmuteDatabase: {
+        set: (id, val) => tempmuteDb.set(id, val),
+        delete: (id) => tempmuteDb.delete(id),
+        entries: () => Object.entries(tempmuteDb.all()),
+        get: (id) => tempmuteDb.get(id),
+    },
     unbanRequests: unbanRequestsDb,
     pollVotes,
     
     addModCase,
     getUserWarnings,
+    getModCases,
     addWarning,
     removeWarning,
     parseDuration,

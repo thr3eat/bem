@@ -1,24 +1,71 @@
 // ============================================================
-//  ROBLOX API FUNCTIONS
+//  ROBLOX API FUNCTIONS — TTL Cache + Retry
 // ============================================================
 
 const { ROBLOX_COOKIE, ROBLOX_GROUP_ID, rankList, KAYIT_GRUP_ID } = require('./constants');
 
-let groupRolesCache = null;
-let kayitGrupRolCache = null;
+// ─── TTL Cache ────────────────────────────────────────────────
+class TTLCache {
+    constructor(ttlMs) {
+        this.ttlMs = ttlMs;
+        this.store = new Map();
+    }
+    get(key) {
+        const entry = this.store.get(key);
+        if (!entry) return null;
+        if (Date.now() > entry.expiresAt) { this.store.delete(key); return null; }
+        return entry.value;
+    }
+    set(key, value) {
+        this.store.set(key, { value, expiresAt: Date.now() + this.ttlMs });
+    }
+    delete(key) { this.store.delete(key); }
+}
+
+const groupRolesCache = new TTLCache(10 * 60 * 1000);  // 10 dakika
+const csrfTokenCache  = new TTLCache(5  * 60 * 1000);  // 5 dakika
+const userCache       = new TTLCache(2  * 60 * 1000);  // 2 dakika
+
+// ─── Retry mekanizması ────────────────────────────────────────
+async function fetchWithRetry(url, options = {}, maxRetries = 3) {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            const res = await fetch(url, options);
+            if (res.status === 429) {
+                const retryAfter = parseInt(res.headers.get('retry-after') || '5') * 1000;
+                console.warn(`[⏳ ROBLOX] Rate limit — ${retryAfter}ms bekleniyor (deneme ${attempt}/${maxRetries})`);
+                await new Promise(r => setTimeout(r, retryAfter));
+                continue;
+            }
+            return res;
+        } catch (err) {
+            if (attempt === maxRetries) throw err;
+            const wait = 1000 * attempt; // Exponential backoff
+            console.warn(`[⚠️ ROBLOX] Ağ hatası, ${wait}ms sonra tekrar (deneme ${attempt}/${maxRetries}): ${err.message}`);
+            await new Promise(r => setTimeout(r, wait));
+        }
+    }
+}
 
 // ============================================================
 //  USER FETCHING
 // ============================================================
 async function getRobloxUser(username) {
+    const cacheKey = `user_${username.toLowerCase()}`;
+    const cached = userCache.get(cacheKey);
+    if (cached) return cached;
+
     try {
-        const response = await fetch('https://users.roblox.com/v1/usernames/users', {
+        const response = await fetchWithRetry('https://users.roblox.com/v1/usernames/users', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ usernames: [username], excludeBannedUsers: false })
         });
         const data = await response.json();
-        if (data.data && data.data.length > 0) return data.data[0];
+        if (data.data && data.data.length > 0) {
+            userCache.set(cacheKey, data.data[0]);
+            return data.data[0];
+        }
         return null;
     } catch {
         return null;
@@ -26,9 +73,14 @@ async function getRobloxUser(username) {
 }
 
 async function getRobloxUserById(userId) {
+    const cacheKey = `userid_${userId}`;
+    const cached = userCache.get(cacheKey);
+    if (cached) return cached;
+
     try {
-        const response = await fetch(`https://users.roblox.com/v1/users/${userId}`);
+        const response = await fetchWithRetry(`https://users.roblox.com/v1/users/${userId}`);
         const data = await response.json();
+        if (data) userCache.set(cacheKey, data);
         return data || null;
     } catch {
         return null;
@@ -37,7 +89,7 @@ async function getRobloxUserById(userId) {
 
 async function getUserRankInGroup(userId, groupId = ROBLOX_GROUP_ID) {
     try {
-        const response = await fetch(`https://groups.roblox.com/v1/users/${userId}/groups/roles`);
+        const response = await fetchWithRetry(`https://groups.roblox.com/v1/users/${userId}/groups/roles`);
         const data = await response.json();
         if (data && data.data) {
             const group = data.data.find(g => g.group.id === groupId);
@@ -51,7 +103,7 @@ async function getUserRankInGroup(userId, groupId = ROBLOX_GROUP_ID) {
 
 async function getGroupMemberCount() {
     try {
-        const response = await fetch(`https://groups.roblox.com/v1/groups/${ROBLOX_GROUP_ID}`);
+        const response = await fetchWithRetry(`https://groups.roblox.com/v1/groups/${ROBLOX_GROUP_ID}`);
         const data = await response.json();
         return data.memberCount || 0;
     } catch {
@@ -60,37 +112,25 @@ async function getGroupMemberCount() {
 }
 
 // ============================================================
-//  RANK SYSTEM - CACHE
+//  RANK SYSTEM — TTL Cache
 // ============================================================
 async function getGroupRoles(groupId = ROBLOX_GROUP_ID) {
-    // Farklı gruplar için ayrı cache tutalım
-    if (groupId === ROBLOX_GROUP_ID && groupRolesCache) return groupRolesCache;
-    if (groupId === KAYIT_GRUP_ID && kayitGrupRolCache) return kayitGrupRolCache;
+    const cacheKey = `roles_${groupId}`;
+    const cached = groupRolesCache.get(cacheKey);
+    if (cached) return cached;
 
     try {
-        const response = await fetch(`https://groups.roblox.com/v1/groups/${groupId}/roles`, {
-            headers: {
-                'Cookie': `.ROBLOSECURITY=${ROBLOX_COOKIE}`
-            }
+        const response = await fetchWithRetry(`https://groups.roblox.com/v1/groups/${groupId}/roles`, {
+            headers: { 'Cookie': `.ROBLOSECURITY=${ROBLOX_COOKIE}` }
         });
-        if (!response.ok) {
-            throw new Error(`Grup rolleri alınamadı: ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`Grup rolleri alınamadı: ${response.status}`);
         const data = await response.json();
-        
-        if (groupId === ROBLOX_GROUP_ID) {
-            groupRolesCache = data.roles || [];
-            console.log(`[✅] Ana grup için ${groupRolesCache.length} rol yüklendi.`);
-            return groupRolesCache;
-        } else if (groupId === KAYIT_GRUP_ID) {
-            kayitGrupRolCache = data.roles || [];
-            console.log(`[✅ KAYIT] Kayıt grubu için ${kayitGrupRolCache.length} rol yüklendi.`);
-            return kayitGrupRolCache;
-        }
-        
-        return data.roles || [];
+        const roles = data.roles || [];
+        groupRolesCache.set(cacheKey, roles);
+        console.log(`[✅ ROBLOX] Grup ${groupId} için ${roles.length} rol cache'lendi (10dk TTL)`);
+        return roles;
     } catch (err) {
-        console.error(`[❌] Grup (${groupId}) rolleri çekilirken hata:`, err.message);
+        console.error(`[❌ ROBLOX] Grup (${groupId}) rolleri çekilirken hata:`, err.message);
         return [];
     }
 }
@@ -101,10 +141,20 @@ async function getRoleIdByRank(rankNumber, groupId = ROBLOX_GROUP_ID) {
     return role ? role.id : null;
 }
 
+// Cache'i zorla yenile (CSRF hatası sonrası vb.)
+function invalidateGroupRolesCache(groupId = ROBLOX_GROUP_ID) {
+    groupRolesCache.delete(`roles_${groupId}`);
+}
+
 // ============================================================
-//  CSRF TOKEN
+//  CSRF TOKEN — TTL Cache
 // ============================================================
-async function getCsrfToken() {
+async function getCsrfToken(forceRefresh = false) {
+    if (!forceRefresh) {
+        const cached = csrfTokenCache.get('csrf');
+        if (cached) return cached;
+    }
+
     try {
         const response = await fetch('https://auth.roblox.com/v2/logout', {
             method: 'POST',
@@ -115,71 +165,66 @@ async function getCsrfToken() {
         });
         const token = response.headers.get('x-csrf-token');
         if (!token) throw new Error('CSRF token alınamadı');
+        csrfTokenCache.set('csrf', token);
         return token;
     } catch (err) {
-        console.error('[❌] CSRF token hatası:', err.message);
+        console.error('[❌ ROBLOX] CSRF token hatası:', err.message);
         throw err;
     }
 }
 
 // ============================================================
-//  SET RANK
+//  SET RANK — Retry + CSRF yenileme
 // ============================================================
 async function setRobloxRank(userId, rankNumber, groupId = ROBLOX_GROUP_ID) {
     const roleId = await getRoleIdByRank(rankNumber, groupId);
     if (!roleId) {
-        throw new Error(`Rank ${rankNumber} için role ID bulunamadı. Grup rolleri cache'ini kontrol edin.`);
+        throw new Error(`Rank ${rankNumber} için role ID bulunamadı.`);
     }
 
-    const csrfToken = await getCsrfToken();
+    let csrfToken = await getCsrfToken();
 
-    const response = await fetch(`https://groups.roblox.com/v1/groups/${groupId}/users/${userId}`, {
-        method: 'PATCH',
-        headers: {
-            'Content-Type': 'application/json',
-            'Cookie': `.ROBLOSECURITY=${ROBLOX_COOKIE}`,
-            'x-csrf-token': csrfToken
-        },
-        body: JSON.stringify({ roleId: roleId })
-    });
+    for (let attempt = 1; attempt <= 3; attempt++) {
+        const response = await fetchWithRetry(`https://groups.roblox.com/v1/groups/${groupId}/users/${userId}`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'Cookie': `.ROBLOSECURITY=${ROBLOX_COOKIE}`,
+                'x-csrf-token': csrfToken
+            },
+            body: JSON.stringify({ roleId })
+        });
 
-    if (!response.ok) {
+        if (response.ok) return true;
+
+        if (response.status === 403) {
+            // CSRF token geçersiz, yenile
+            console.warn('[⚠️ ROBLOX] CSRF token geçersiz, yenileniyor...');
+            csrfToken = await getCsrfToken(true);
+            continue;
+        }
+
         const errText = await response.text().catch(() => 'Bilinmeyen hata');
         throw new Error(`Roblox API Hatası: ${response.status} - ${errText}`);
     }
 
-    return true;
+    throw new Error('Maksimum deneme sayısına ulaşıldı (setRobloxRank)');
 }
 
 // ============================================================
-//  KAYIT SYSTEM - GROUP ROLES
+//  KAYIT SYSTEM — getGroupRoles ile birleştirildi
 // ============================================================
 async function kayitGetirGrupRolleri() {
-    if (kayitGrupRolCache) return kayitGrupRolCache;
-    try {
-        const res = await fetch(`https://groups.roblox.com/v1/groups/${KAYIT_GRUP_ID}/roles`, {
-            headers: { 'Cookie': `.ROBLOSECURITY=${ROBLOX_COOKIE}` }
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        kayitGrupRolCache = data.roles || [];
-        console.log(`[✅ KAYIT] ${KAYIT_GRUP_ID} grubu için ${kayitGrupRolCache.length} rol yüklendi.`);
-        return kayitGrupRolCache;
-    } catch (err) {
-        console.error('[❌ KAYIT] Grup rolleri alınamadı:', err.message);
-        return [];
-    }
+    return getGroupRoles(KAYIT_GRUP_ID);
 }
 
 async function kayitGetirRoleId(rankNumber) {
-    const roller = await kayitGetirGrupRolleri();
-    const rol    = roller.find(r => r.rank === rankNumber);
-    return rol ? rol.id : null;
+    return getRoleIdByRank(rankNumber, KAYIT_GRUP_ID);
 }
 
 async function kayitGruptaMi(robloxUserId) {
     try {
-        const res  = await fetch(`https://groups.roblox.com/v1/users/${robloxUserId}/groups/roles`);
+        const res  = await fetchWithRetry(`https://groups.roblox.com/v1/users/${robloxUserId}/groups/roles`);
         const data = await res.json();
         if (data?.data) {
             return data.data.some(g => g.group.id === KAYIT_GRUP_ID);
@@ -191,44 +236,11 @@ async function kayitGruptaMi(robloxUserId) {
 }
 
 async function kayitKaydRobloxKullanici(username) {
-    try {
-        const res  = await fetch('https://users.roblox.com/v1/usernames/users', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ usernames: [username], excludeBannedUsers: false })
-        });
-        const data = await res.json();
-        if (data?.data?.length > 0) return data.data[0];
-        return null;
-    } catch {
-        return null;
-    }
+    return getRobloxUser(username);
 }
 
 async function kayitSetRobloxRank(userId, rankNumber) {
-    const roleId = await kayitGetirRoleId(rankNumber);
-    if (!roleId) {
-        throw new Error(`Rank ${rankNumber} için role ID bulunamadı.`);
-    }
-
-    const csrfToken = await getCsrfToken();
-
-    const response = await fetch(`https://groups.roblox.com/v1/groups/${KAYIT_GRUP_ID}/users/${userId}`, {
-        method: 'PATCH',
-        headers: {
-            'Content-Type': 'application/json',
-            'Cookie': `.ROBLOSECURITY=${ROBLOX_COOKIE}`,
-            'x-csrf-token': csrfToken
-        },
-        body: JSON.stringify({ roleId: roleId })
-    });
-
-    if (!response.ok) {
-        const errText = await response.text().catch(() => 'Bilinmeyen hata');
-        throw new Error(`Roblox API Hatası: ${response.status} - ${errText}`);
-    }
-
-    return true;
+    return setRobloxRank(userId, rankNumber, KAYIT_GRUP_ID);
 }
 
 module.exports = {
@@ -240,6 +252,7 @@ module.exports = {
     getRoleIdByRank,
     getCsrfToken,
     setRobloxRank,
+    invalidateGroupRolesCache,
     kayitGetirGrupRolleri,
     kayitGetirRoleId,
     kayitGruptaMi,

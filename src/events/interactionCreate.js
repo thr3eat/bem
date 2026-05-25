@@ -7,64 +7,64 @@ module.exports = {
             const command = client.commands.get(interaction.commandName);
 
             if (!command) {
-                console.error(`No command matching ${interaction.commandName} was found.`);
+                console.error(`[⚠️] Komut bulunamadı: ${interaction.commandName}`);
                 return;
             }
 
-            // Cooldown logic
+            // ─── Cooldown ────────────────────────────────────────────
             const { cooldowns } = client;
             if (!cooldowns.has(command.data.name)) {
                 cooldowns.set(command.data.name, new Collection());
             }
 
-            const now = Date.now();
+            const now        = Date.now();
             const timestamps = cooldowns.get(command.data.name);
-            const defaultCooldownDuration = 3;
-            const cooldownAmount = (command.cooldown ?? defaultCooldownDuration) * 1000;
+            const cooldownMs = (command.cooldown ?? 3) * 1000;
 
             if (timestamps.has(interaction.user.id)) {
-                const expirationTime = timestamps.get(interaction.user.id) + cooldownAmount;
-
-                if (now < expirationTime) {
-                    const expiredTimestamp = Math.round(expirationTime / 1000);
-                    return interaction.reply({ 
-                        content: `Lütfen bu komutu tekrar kullanmadan önce bekleyin. Tekrar kullanabileceğiniz zaman: <t:${expiredTimestamp}:R>.`, 
-                        flags: 64 
+                const expiresAt = timestamps.get(interaction.user.id) + cooldownMs;
+                if (now < expiresAt) {
+                    const expiredTimestamp = Math.round(expiresAt / 1000);
+                    return interaction.reply({
+                        content: `⏳ Bu komutu tekrar kullanmak için <t:${expiredTimestamp}:R> beklemelisin.`,
+                        flags: 64
                     });
                 }
             }
 
             timestamps.set(interaction.user.id, now);
-            setTimeout(() => timestamps.delete(interaction.user.id), cooldownAmount);
+            setTimeout(() => timestamps.delete(interaction.user.id), cooldownMs);
 
+            // ─── Çalıştır ────────────────────────────────────────────
             try {
                 await command.execute(interaction, client);
             } catch (error) {
-                console.error(error);
+                console.error(`[❌] Komut hatası [${interaction.commandName}]:`, error);
+                const msg = '❌ Komut çalıştırılırken bir hata oluştu. Lütfen tekrar deneyin.';
                 if (interaction.replied || interaction.deferred) {
-                    await interaction.followUp({ content: 'There was an error while executing this command!', flags: 64 });
+                    await interaction.followUp({ content: msg, flags: 64 }).catch(() => {});
                 } else {
-                    await interaction.reply({ content: 'There was an error while executing this command!', flags: 64 });
+                    await interaction.reply({ content: msg, flags: 64 }).catch(() => {});
                 }
             }
+
         } else if (interaction.isAutocomplete()) {
             const command = client.commands.get(interaction.commandName);
-
-            if (!command) {
-                console.error(`No command matching ${interaction.commandName} was found.`);
-                return;
-            }
-
+            if (!command) return;
             try {
                 await command.autocomplete(interaction);
             } catch (error) {
-                console.error(error);
+                console.error(`[❌] Autocomplete hatası [${interaction.commandName}]:`, error);
             }
+
         } else if (interaction.isButton()) {
-            // handle buttons
-            // For now, keep the logic here or move to a separate handler
             const { handleButtonInteraction } = require('../modules/buttonHandler');
-            await handleButtonInteraction(interaction, client);
+            try {
+                await handleButtonInteraction(interaction, client);
+            } catch (error) {
+                console.error('[❌] Buton hatası:', error);
+                await interaction.reply({ content: '❌ Buton işlenirken bir hata oluştu.', flags: 64 }).catch(() => {});
+            }
         }
     },
 };
