@@ -60,18 +60,18 @@ const rankList = [
 //  EKO YILDIZ SYSTEM
 // ============================================================
 const EKO_GUILD_ID      = '1367646464804655104';
-const EKO_KANAL_ID      = '1393374779104432220';
-const EKO_ROL_ID        = '1367646745324159127';
+const EKO_KANAL_ID      = '1518692517955244133';
+const EKO_ROL_ID        = '1518707259633303814';
 const EKO_DM_MESAJ      = "Eko Yıldız'a abone oldunuz! Aramıza hoşgeldiniz";
 
 // ============================================================
 //  KAYIT SYSTEM
 // ============================================================
 const KAYIT_GUILD_ID        = '1367646464804655104';
-const KAYIT_KANAL_ID        = '1497713387604545768';
+const KAYIT_KANAL_ID        = '1518909105375547524';
 const KAYIT_GRUP_ID         = 35431216;
 const KAYIT_RANK_ID         = 2;
-const KAYIT_DISCORD_ROL_ID  = '1497719909025714346';
+const KAYIT_DISCORD_ROL_ID  = '1518909532129067068';
 const KAYIT_COOLDOWN_MS = 30 * 1000;
 
 const KAYIT_KARSILAMA_ICERIK = [

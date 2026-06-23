@@ -19,8 +19,8 @@ module.exports = {
 
         const bugun      = new Date().toISOString().slice(0, 10);
         const gunlukFoto = ekoDailyStats.get(bugun) || 0;
-        const toplamAbone = ekoAbonerDatabase.size;
-        const toplamFoto  = [...ekoAbonerDatabase.values()].reduce((t, u) => t + (u.totalPhotos || 0), 0);
+        const toplamAbone = ekoAbonerDatabase.size();
+        const toplamFoto  = Object.values(ekoAbonerDatabase.all()).reduce((t, u) => t + (u.totalPhotos || 0), 0);
 
         let rolUyeSayisi = 0;
         try {

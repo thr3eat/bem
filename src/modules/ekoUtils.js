@@ -1,7 +1,8 @@
 const { EmbedBuilder } = require('discord.js');
 const { EKO_GUILD_ID, EKO_KANAL_ID, EKO_ROL_ID, EKO_DM_MESAJ } = require('./constants');
+const JsonDatabase = require('./jsonDatabase');
 
-const ekoAbonerDatabase = new Map();
+const ekoAbonerDatabase = new JsonDatabase('subscribers.json');
 const ekoDailyStats = new Map();
 const ekoCooldownSet = new Set();
 
