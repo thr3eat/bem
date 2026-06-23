@@ -32,12 +32,13 @@ module.exports = {
         // Geçici ban/mute kontrolü - her dakika çalışır
         scheduler.addTask('punishment-expiry-check', () => checkExpiredPunishments(client, config), 60000);
 
-        // Kayıt karşılama mesajını kontrol et
+        // Kayıt ve Eko Yıldız karşılama mesajlarını kontrol et
         const { kayitKarsilamaMesajiniGonder } = require('../modules/kayitUtils');
+        const { ekoKarsilamaMesajiniGonder, ekoAbonerDatabase, EKO_GUILD_ID, EKO_ROL_ID } = require('../modules/ekoUtils');
         setTimeout(() => kayitKarsilamaMesajiniGonder(client), 3000);
+        setTimeout(() => ekoKarsilamaMesajiniGonder(client), 5000);
 
         // Başlangıçta eksik abone rollerini tamamlama kontrolü
-        const { ekoAbonerDatabase, EKO_GUILD_ID, EKO_ROL_ID } = require('../modules/ekoUtils');
         setTimeout(async () => {
             try {
                 const guild = client.guilds.cache.get(EKO_GUILD_ID);

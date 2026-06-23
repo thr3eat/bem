@@ -78,9 +78,65 @@ function ekoLogEmbed(member, yeniAbone, fotoSayi, dmDurumu) {
         .setFooter({ text: 'Eko Yıldız Otomasyon Sistemi' });
 }
 
+let ekoKarsilamaMesajId = null;
+
+async function ekoKarsilamaMesajiniGonder(client) {
+    try {
+        const guild = await client.guilds.fetch(EKO_GUILD_ID).catch(() => null);
+        if (!guild) return;
+        const kanal = await guild.channels.fetch(EKO_KANAL_ID).catch(() => null);
+        if (!kanal) return;
+
+        const mesajlar = await kanal.messages.fetch({ limit: 50 }).catch(() => null);
+        if (mesajlar) {
+            const mevcutMesaj = mesajlar.find(
+                m => m.author.id === client.user.id && m.pinned && m.embeds.some(e => e.title === '⭐ Eko Yıldız Abone Rolü Nasıl Alınır?')
+            );
+            if (mevcutMesaj) {
+                ekoKarsilamaMesajId = mevcutMesaj.id;
+                console.log('[📌 EKO] Bilgilendirme mesajı zaten mevcut, izleniyor.');
+                return;
+            }
+        }
+
+        const embed = new EmbedBuilder()
+            .setColor('#FFD700')
+            .setTitle('⭐ Eko Yıldız Abone Rolü Nasıl Alınır?')
+            .setDescription(
+                `Aramıza hoş geldin! YouTube kanalımıza abone olarak özel rolü hemen alabilirsin.\n\n` +
+                `**📌 Adım Adım Rol Alma Rehberi:**\n\n` +
+                `1️⃣ **Abone Ol:** Öncelikli olarak [YouTube Eko Yıldız](https://www.youtube.com/@eko8yildiz) kanalına abone ol.\n\n` +
+                `2️⃣ **Ekran Görüntüsü Al:** YouTube kanalına abone olduğuna dair net bir ekran görüntüsü (kanıt) al.\n\n` +
+                `3️⃣ **Buraya Gönder:** Aldığın ekran görüntüsünü (fotoğrafı) **bu kanala** yükleyerek gönder.\n\n` +
+                `⚡ Sistem ekran görüntüsünü otomatik olarak kontrol edecek ve sana **<@&${EKO_ROL_ID}>** rolünü anında verecektir! 🎉`
+            )
+            .setTimestamp()
+            .setFooter({ text: 'Eko Yıldız Otomasyon Sistemi | Sentura 🦸 ekoyildiz' });
+
+        const yeniMesaj = await kanal.send({ embeds: [embed] });
+        ekoKarsilamaMesajId = yeniMesaj.id;
+
+        await yeniMesaj.pin().catch(() => {});
+        console.log('[📌 EKO] Bilgilendirme mesajı gönderildi ve sabitlendi.');
+
+        // Sistem sabitleme mesajını sil
+        setTimeout(async () => {
+            const sonMesajlar = await kanal.messages.fetch({ limit: 5 }).catch(() => null);
+            if (sonMesajlar) {
+                const sistemMesaji = sonMesajlar.find(m => m.system && m.type === 6);
+                if (sistemMesaji) await sistemMesaji.delete().catch(() => {});
+            }
+        }, 3000);
+
+    } catch (err) {
+        console.error('[❌ EKO] Bilgilendirme mesajı gönderilemedi:', err.message);
+    }
+}
+
 module.exports = {
     ekoAbonerDatabase, ekoDailyStats, ekoCooldownSet,
     ekoFotografVarMi, ekoGuncelleIstatistik,
     ekoAboneDMEmbed, ekoKanalTebrikEmbed, ekoLogEmbed,
-    EKO_GUILD_ID, EKO_KANAL_ID, EKO_ROL_ID
+    EKO_GUILD_ID, EKO_KANAL_ID, EKO_ROL_ID,
+    ekoKarsilamaMesajiniGonder, getEkoKarsilamaMesajId: () => ekoKarsilamaMesajId
 };
