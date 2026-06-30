@@ -1,9 +1,27 @@
 const { Events, Collection } = require('discord.js');
+const configManager = require('../modules/configManager');
 
 module.exports = {
     name: Events.InteractionCreate,
     async execute(interaction, client) {
         if (interaction.isChatInputCommand()) {
+            // Sunucu ve yetki kontrolü (Yalnızca belirtilen sunucuda ve rolde olanlar kullanabilir)
+            const allowedGuildId = configManager.get('ALLOWED_GUILD_ID', '1483482948320891074');
+            const allowedRoleId = configManager.get('ALLOWED_ROLE_ID', '1521519524812165280');
+
+            const roles = interaction.member?.roles;
+            const hasRole = roles && (
+                (typeof roles.cache?.has === 'function' && roles.cache.has(allowedRoleId)) ||
+                (Array.isArray(roles) && roles.includes(allowedRoleId))
+            );
+
+            if (interaction.guildId !== allowedGuildId || !hasRole) {
+                return interaction.reply({
+                    content: '❌ Bu botun komutlarını kullanma yetkiniz bulunmamaktadır.',
+                    flags: 64 // Ephemeral (sadece kullanıcıya görünür)
+                });
+            }
+
             const command = client.commands.get(interaction.commandName);
 
             if (!command) {
@@ -49,6 +67,20 @@ module.exports = {
             }
 
         } else if (interaction.isAutocomplete()) {
+            // Sunucu ve yetki kontrolü (Autocomplete için de sınırla)
+            const allowedGuildId = configManager.get('ALLOWED_GUILD_ID', '1483482948320891074');
+            const allowedRoleId = configManager.get('ALLOWED_ROLE_ID', '1521519524812165280');
+
+            const roles = interaction.member?.roles;
+            const hasRole = roles && (
+                (typeof roles.cache?.has === 'function' && roles.cache.has(allowedRoleId)) ||
+                (Array.isArray(roles) && roles.includes(allowedRoleId))
+            );
+
+            if (interaction.guildId !== allowedGuildId || !hasRole) {
+                return;
+            }
+
             const command = client.commands.get(interaction.commandName);
             if (!command) return;
             try {
