@@ -13,10 +13,25 @@ const {
     EKO_ROL_ID,
     KAYIT_GUILD_ID,
     KAYIT_DISCORD_ROL_ID,
-    EKO_ONAY_KANAL_ID
+    EKO_ONAY_KANAL_ID,
+    SISTEM_LOG_KANAL_ID
 } = require('./constants');
 
 const conversationsDb = new JsonDatabase('conversations.json');
+
+/**
+ * Helper to send log messages to the system log channel.
+ */
+async function sendSystemLog(client, embedOrPayload) {
+    try {
+        const logKanal = await client.channels.fetch(SISTEM_LOG_KANAL_ID).catch(() => null);
+        if (logKanal) {
+            await logKanal.send(embedOrPayload).catch(() => {});
+        }
+    } catch (err) {
+        console.error('[SYSTEM LOG] Log gönderilemedi:', err.message);
+    }
+}
 
 /**
  * Helper to update components on a message to remove or disable buttons.
@@ -75,7 +90,27 @@ async function handleCustomInteraction(interaction, client) {
                 .setTitle('✅ Abone Onaylandı!')
                 .setDescription(`${oldEmbed.description}\n\n**Onaylayan Moderatör:** ${interaction.user.toString()}\nTeşekkürler!`);
 
-            await interaction.message.edit({ embeds: [updatedEmbed], components: [] });
+            const row = new ActionRowBuilder().addComponents(
+                new ButtonBuilder()
+                    .setCustomId(`eko_undo_youtube_${userId}_approve`)
+                    .setLabel('Geri Al (Reddet)')
+                    .setStyle(ButtonStyle.Secondary)
+                    .setEmoji('↩️'),
+                new ButtonBuilder()
+                    .setCustomId(`eko_mod_send_msg_${userId}`)
+                    .setLabel('Mesaj Gönder')
+                    .setStyle(ButtonStyle.Primary)
+                    .setEmoji('✉️')
+            );
+            await interaction.message.edit({ embeds: [updatedEmbed], components: [row] });
+
+            // Send system log
+            const logEmbed = new EmbedBuilder()
+                .setColor('#00FF88')
+                .setTitle('✅ Abone Onaylandı (Log)')
+                .setDescription(`**${interaction.user.tag}** adlı moderatör, **<@${userId}>** (\`${userId}\`) kullanıcısının YouTube abone rolünü onayladı.`)
+                .setTimestamp();
+            await sendSystemLog(client, { embeds: [logEmbed] });
             return;
         }
 
@@ -159,7 +194,28 @@ async function handleCustomInteraction(interaction, client) {
                 .setTitle('❌ Abone Reddedildi!')
                 .setDescription(`${oldEmbed.description}\n\n**İşlemi Yapan Moderatör:** ${interaction.user.toString()}`);
 
-            await interaction.message.edit({ embeds: [updatedEmbed], components: [] });
+            const row = new ActionRowBuilder().addComponents(
+                new ButtonBuilder()
+                    .setCustomId(`eko_undo_youtube_${userId}_reject`)
+                    .setLabel('Geri Al (Onayla)')
+                    .setStyle(ButtonStyle.Secondary)
+                    .setEmoji('↩️'),
+                new ButtonBuilder()
+                    .setCustomId(`eko_mod_send_msg_${userId}`)
+                    .setLabel('Mesaj Gönder')
+                    .setStyle(ButtonStyle.Primary)
+                    .setEmoji('✉️')
+            );
+            await interaction.message.edit({ embeds: [updatedEmbed], components: [row] });
+
+            // Send system log
+            const logEmbed = new EmbedBuilder()
+                .setColor('#FF0000')
+                .setTitle('❌ Abone Reddedildi (Log)')
+                .setDescription(`**${interaction.user.tag}** adlı moderatör, **<@${userId}>** (\`${userId}\`) kullanıcısının YouTube abone rolünü reddetti ve rolünü geri aldı.`)
+                .setTimestamp();
+            await sendSystemLog(client, { embeds: [logEmbed] });
+
             await interaction.editReply({ content: '✅ Abone başarıyla reddedildi ve kullanıcıya bildirim gönderildi.' });
             return;
         }
@@ -187,7 +243,27 @@ async function handleCustomInteraction(interaction, client) {
                 .setTitle('✅ Roblox Grup Kontrolü Başarılı')
                 .setDescription(`${oldEmbed.description}\n\nKullanıcının grupta olduğu onaylandı.\n**Onaylayan Moderatör:** ${interaction.user.toString()}`);
 
-            await interaction.message.edit({ embeds: [updatedEmbed], components: [] });
+            const row = new ActionRowBuilder().addComponents(
+                new ButtonBuilder()
+                    .setCustomId(`eko_undo_roblox_${userId}_approve`)
+                    .setLabel('Geri Al (Reddet)')
+                    .setStyle(ButtonStyle.Secondary)
+                    .setEmoji('↩️'),
+                new ButtonBuilder()
+                    .setCustomId(`eko_mod_send_msg_${userId}`)
+                    .setLabel('Mesaj Gönder')
+                    .setStyle(ButtonStyle.Primary)
+                    .setEmoji('✉️')
+            );
+            await interaction.message.edit({ embeds: [updatedEmbed], components: [row] });
+
+            // Send system log
+            const logEmbed = new EmbedBuilder()
+                .setColor('#00FF88')
+                .setTitle('✅ Roblox Grup Katılımı Onaylandı (Log)')
+                .setDescription(`**${interaction.user.tag}** adlı moderatör, **<@${userId}>** (\`${userId}\`) kullanıcısının Roblox grubunda bulunmaya devam ettiğini onayladı.`)
+                .setTimestamp();
+            await sendSystemLog(client, { embeds: [logEmbed] });
             return;
         }
 
@@ -283,7 +359,28 @@ async function handleCustomInteraction(interaction, client) {
                 .setTitle('❌ Roblox Grup Kontrolü - Kayıt İptal Edildi')
                 .setDescription(`${oldEmbed.description}\n\nKullanıcı grupta bulunmadığı için kaydı iptal edildi.\n**İşlemi Yapan Moderatör:** ${interaction.user.toString()}`);
 
-            await interaction.message.edit({ embeds: [updatedEmbed], components: [] });
+            const row = new ActionRowBuilder().addComponents(
+                new ButtonBuilder()
+                    .setCustomId(`eko_undo_roblox_${userId}_reject`)
+                    .setLabel('Geri Al (Onayla)')
+                    .setStyle(ButtonStyle.Secondary)
+                    .setEmoji('↩️'),
+                new ButtonBuilder()
+                    .setCustomId(`eko_mod_send_msg_${userId}`)
+                    .setLabel('Mesaj Gönder')
+                    .setStyle(ButtonStyle.Primary)
+                    .setEmoji('✉️')
+            );
+            await interaction.message.edit({ embeds: [updatedEmbed], components: [row] });
+
+            // Send system log
+            const logEmbed = new EmbedBuilder()
+                .setColor('#FF0000')
+                .setTitle('❌ Roblox Grup Katılımı Reddedildi (Log)')
+                .setDescription(`**${interaction.user.tag}** adlı moderatör, **<@${userId}>** (\`${userId}\`) kullanıcısının Roblox grubunda olmadığını belirterek kaydını iptal etti ve rolünü geri aldı.`)
+                .setTimestamp();
+            await sendSystemLog(client, { embeds: [logEmbed] });
+
             await interaction.editReply({ content: '✅ Roblox kaydı iptal edildi ve kullanıcıya bildirim gönderildi.' });
             return;
         }
@@ -379,6 +476,14 @@ async function handleCustomInteraction(interaction, client) {
                         await mod.send(`🔒 **Görüşme Sonlandırıldı:** <@${conv.userId}> ile olan görüşme kalıcı olarak kapatılmıştır.`);
                     }
                 } catch {}
+
+                // Send system log
+                const logEmbed = new EmbedBuilder()
+                    .setColor('#888888')
+                    .setTitle('🔒 Görüşme Sonlandırıldı (Log)')
+                    .setDescription(`**<@${conv.userId}>** ile yetkili **<@${conv.moderatorId}>** arasındaki interaktif görüşme kalıcı olarak sonlandırılmıştır.`)
+                    .setTimestamp();
+                await sendSystemLog(client, { embeds: [logEmbed] });
             } else {
                 await interaction.editReply({ content: '⚠️ Görüşmeyi sonlandırma talebiniz kaydedildi. Moderatör de onayladığında görüşme sonlanacaktır.' });
 
@@ -458,6 +563,14 @@ async function handleCustomInteraction(interaction, client) {
                         await user.send(`🔒 **Görüşme Sonlandırıldı:** Yetkili ile olan görüşmeniz kalıcı olarak kapatılmıştır.`);
                     }
                 } catch {}
+
+                // Send system log
+                const logEmbed = new EmbedBuilder()
+                    .setColor('#888888')
+                    .setTitle('🔒 Görüşme Sonlandırıldı (Log)')
+                    .setDescription(`**<@${conv.userId}>** ile yetkili **<@${conv.moderatorId}>** arasındaki interaktif görüşme kalıcı olarak sonlandırılmıştır.`)
+                    .setTimestamp();
+                await sendSystemLog(client, { embeds: [logEmbed] });
             } else {
                 await interaction.editReply({ content: '⚠️ Görüşmeyi sonlandırma talebiniz kaydedildi. Kullanıcı da onayladığında görüşme sonlanacaktır.' });
 
@@ -479,6 +592,214 @@ async function handleCustomInteraction(interaction, client) {
                     }
                 } catch {}
             }
+            return;
+        }
+
+        // --- Geri Al (Undo Action) ---
+        if (customId.startsWith('eko_undo_')) {
+            await interaction.deferReply({ flags: 64 });
+            const parts = customId.split('_');
+            const type = parts[2];     // 'youtube' or 'roblox'
+            const userId = parts[3];
+            const action = parts[4];   // 'approve' or 'reject'
+
+            const guildId = type === 'youtube' ? EKO_GUILD_ID : KAYIT_GUILD_ID;
+            const roleId = type === 'youtube' ? EKO_ROL_ID : KAYIT_DISCORD_ROL_ID;
+            const guild = client.guilds.cache.get(guildId);
+
+            if (action === 'approve') {
+                // Undoing approval -> reject now
+                try {
+                    if (guild) {
+                        const member = await guild.members.fetch(userId).catch(() => null);
+                        if (member && member.roles.cache.has(roleId)) {
+                            await member.roles.remove(roleId, `Geri Al - Reddedildi (İşlem: ${interaction.user.tag})`);
+                        }
+                    }
+                } catch (err) {
+                    console.error('[UNDO APPROVE]', err.message);
+                }
+
+                // Create conversation session
+                conversationsDb.set(userId, {
+                    userId: userId,
+                    moderatorId: interaction.user.id,
+                    moderatorName: interaction.user.tag,
+                    type: type,
+                    status: 'active',
+                    userEnd: false,
+                    modEnd: false,
+                    rating: null,
+                    comment: null,
+                    lastMessageFrom: 'system'
+                });
+
+                // Notify user via DM
+                try {
+                    const user = await client.users.fetch(userId).catch(() => null);
+                    if (user) {
+                        const rejectEmbed = new EmbedBuilder()
+                            .setColor('#FF0000')
+                            .setTitle('⚠️ KARAR DEĞİŞİKLİĞİ - ONAYINIZ GERİ ÇEKİLDİ!')
+                            .setDescription(`Onaylanan ${type === 'youtube' ? 'YouTube abone' : 'Roblox grup'} durumunuz **${interaction.user.tag}** adlı moderatör tarafından yapılan incelemede geri çekilmiş ve reddedilmiştir.\n\n` +
+                                `**Dikkat!** Eğer bir sorun varsa lütfen destek talebi (ticket) açın.`)
+                            .setTimestamp();
+
+                        const row = new ActionRowBuilder().addComponents(
+                            new ButtonBuilder()
+                                .setCustomId('user_rate_btn')
+                                .setLabel('MODERATÖRÜ PUANLA')
+                                .setStyle(ButtonStyle.Primary)
+                                .setEmoji('⭐'),
+                            new ButtonBuilder()
+                                .setCustomId('user_reply_btn')
+                                .setLabel('MODERATÖRE CEVAP GÖNDER')
+                                .setStyle(ButtonStyle.Success)
+                                .setEmoji('✉️'),
+                            new ButtonBuilder()
+                                .setCustomId('user_end_btn')
+                                .setLabel('GÖRÜŞMEYİ KALICI SONLANDIR')
+                                .setStyle(ButtonStyle.Danger)
+                                .setEmoji('🔒')
+                        );
+                        await user.send({ embeds: [rejectEmbed], components: [row] });
+                    }
+                } catch {}
+
+                // Update channel message
+                const oldEmbed = interaction.message.embeds[0];
+                const updatedEmbed = EmbedBuilder.from(oldEmbed)
+                    .setColor('#FF0000')
+                    .setTitle(`❌ Karar Geri Alındı - Reddedildi (${type === 'youtube' ? 'YouTube' : 'Roblox'})`)
+                    .setDescription(`${oldEmbed.description.split('\n\n**Onaylayan')[0]}\n\n**İşlemi Geri Alan Moderatör:** ${interaction.user.toString()}`);
+
+                const row = new ActionRowBuilder().addComponents(
+                    new ButtonBuilder()
+                        .setCustomId(`eko_undo_${type}_${userId}_reject`)
+                        .setLabel('Geri Al (Onayla)')
+                        .setStyle(ButtonStyle.Secondary)
+                        .setEmoji('↩️'),
+                    new ButtonBuilder()
+                        .setCustomId(`eko_mod_send_msg_${userId}`)
+                        .setLabel('Mesaj Gönder')
+                        .setStyle(ButtonStyle.Primary)
+                        .setEmoji('✉️')
+                );
+                await interaction.message.edit({ embeds: [updatedEmbed], components: [row] });
+
+                // Send system log
+                const logEmbed = new EmbedBuilder()
+                    .setColor('#FF0000')
+                    .setTitle('↩️ Karar Geri Alındı (Log)')
+                    .setDescription(`**${interaction.user.tag}** adlı moderatör, **<@${userId}>** kullanıcısının ${type === 'youtube' ? 'YouTube onayını' : 'Roblox kaydını'} **GERİ ALDI (REDDETTİ)**.`)
+                    .setTimestamp();
+                await sendSystemLog(client, { embeds: [logEmbed] });
+
+                await interaction.editReply({ content: '✅ Onay kararı geri alındı ve kullanıcı reddedildi.' });
+            } else if (action === 'reject') {
+                // Undoing rejection -> approve now
+                try {
+                    if (guild) {
+                        const member = await guild.members.fetch(userId).catch(() => null);
+                        if (member && !member.roles.cache.has(roleId)) {
+                            await member.roles.add(roleId, `Geri Al - Onaylandı (İşlem: ${interaction.user.tag})`);
+                        }
+                    }
+                } catch (err) {
+                    console.error('[UNDO REJECT]', err.message);
+                }
+
+                // Terminate any active conversation session
+                const conv = conversationsDb.get(userId);
+                if (conv && conv.status === 'active') {
+                    conv.status = 'ended';
+                    conversationsDb.set(userId, conv);
+                }
+
+                // Notify user via DM
+                try {
+                    const user = await client.users.fetch(userId).catch(() => null);
+                    if (user) {
+                        const approveEmbed = new EmbedBuilder()
+                            .setColor('#00FF88')
+                            .setTitle('🎉 MÜJDE - ONAYINIZ TEKRAR VERİLDİ!')
+                            .setDescription(`Reddedilen ${type === 'youtube' ? 'YouTube abone' : 'Roblox grup'} durumunuz yapılan inceleme sonrasında **${interaction.user.tag}** adlı moderatör tarafından onaylanmış ve rolünüz tanımlanmıştır!`)
+                            .setTimestamp();
+                        await user.send({ embeds: [approveEmbed] });
+                    }
+                } catch {}
+
+                // Update channel message
+                const oldEmbed = interaction.message.embeds[0];
+                const updatedEmbed = EmbedBuilder.from(oldEmbed)
+                    .setColor('#00FF88')
+                    .setTitle(`✅ Karar Geri Alındı - Onaylandı (${type === 'youtube' ? 'YouTube' : 'Roblox'})`)
+                    .setDescription(`${oldEmbed.description.split('\n\n**İşlemi')[0]}\n\n**İşlemi Geri Alan Moderatör:** ${interaction.user.toString()}`);
+
+                const row = new ActionRowBuilder().addComponents(
+                    new ButtonBuilder()
+                        .setCustomId(`eko_undo_${type}_${userId}_approve`)
+                        .setLabel('Geri Al (Reddet)')
+                        .setStyle(ButtonStyle.Secondary)
+                        .setEmoji('↩️'),
+                    new ButtonBuilder()
+                        .setCustomId(`eko_mod_send_msg_${userId}`)
+                        .setLabel('Mesaj Gönder')
+                        .setStyle(ButtonStyle.Primary)
+                        .setEmoji('✉️')
+                );
+                await interaction.message.edit({ embeds: [updatedEmbed], components: [row] });
+
+                // Send system log
+                const logEmbed = new EmbedBuilder()
+                    .setColor('#00FF88')
+                    .setTitle('↩️ Karar Geri Alındı (Log)')
+                    .setDescription(`**${interaction.user.tag}** adlı moderatör, **<@${userId}>** kullanıcısının ${type === 'youtube' ? 'YouTube onayını' : 'Roblox kaydını'} **GERİ ALDI (ONAYLADI)**.`)
+                    .setTimestamp();
+                await sendSystemLog(client, { embeds: [logEmbed] });
+
+                await interaction.editReply({ content: '✅ Red kararı geri alındı ve kullanıcı onaylandı.' });
+            }
+            return;
+        }
+
+        // --- Moderatör: Kanaldan Mesaj Gönder ---
+        if (customId.startsWith('eko_mod_send_msg_')) {
+            const userId = customId.split('_')[4];
+            
+            // Check or initialize conversation
+            let conv = conversationsDb.get(userId);
+            if (!conv || conv.status !== 'active') {
+                conv = {
+                    userId: userId,
+                    moderatorId: interaction.user.id,
+                    moderatorName: interaction.user.tag,
+                    type: 'youtube',
+                    status: 'active',
+                    userEnd: false,
+                    modEnd: false,
+                    rating: null,
+                    comment: null,
+                    lastMessageFrom: 'system'
+                };
+                conversationsDb.set(userId, conv);
+            }
+
+            const modal = new ModalBuilder()
+                .setCustomId(`mod_reply_modal_${userId}`)
+                .setTitle('Kullanıcıya Mesaj Gönder');
+
+            const contentInput = new TextInputBuilder()
+                .setCustomId('reply_content')
+                .setLabel('Mesajınız')
+                .setPlaceholder('Kullanıcıya DM olarak iletilecek mesajı yazın...')
+                .setStyle(TextInputStyle.Paragraph)
+                .setMinLength(2)
+                .setMaxLength(500)
+                .setRequired(true);
+
+            modal.addComponents(new ActionRowBuilder().addComponents(contentInput));
+            await interaction.showModal(modal);
             return;
         }
     }
@@ -511,24 +832,26 @@ async function handleCustomInteraction(interaction, client) {
             // Disable rating button in the DM
             await disableMessageButtons(interaction.message, ['user_reply_btn', 'user_end_btn']);
 
-            // Send feedback log to EKO_ONAY_KANAL_ID
+            // Send feedback log to EKO_ONAY_KANAL_ID and SISTEM_LOG_KANAL_ID
             try {
+                const ratingEmbed = new EmbedBuilder()
+                    .setColor('#FFD700')
+                    .setTitle('⭐ Yetkili Değerlendirmesi')
+                    .setDescription(`Bir kullanıcı reddetme işlemi sonrası yetkiliyi puanladı.`)
+                    .addFields(
+                        { name: '👤 Kullanıcı', value: `${interaction.user.toString()} (\`${interaction.user.id}\`)`, inline: true },
+                        { name: '👮 Yetkili', value: `<@${conv.moderatorId}> (\`${conv.moderatorId}\`)`, inline: true },
+                        { name: '📊 Puan', value: '⭐'.repeat(stars) + ` (${stars}/5)`, inline: true },
+                        { name: '💬 Yorum', value: comment }
+                    )
+                    .setTimestamp();
+
                 const onayKanal = await client.channels.fetch(EKO_ONAY_KANAL_ID).catch(() => null);
                 if (onayKanal) {
-                    const ratingEmbed = new EmbedBuilder()
-                        .setColor('#FFD700')
-                        .setTitle('⭐ Yetkili Değerlendirmesi')
-                        .setDescription(`Bir kullanıcı reddetme işlemi sonrası yetkiliyi puanladı.`)
-                        .addFields(
-                            { name: '👤 Kullanıcı', value: `${interaction.user.toString()} (\`${interaction.user.id}\`)`, inline: true },
-                            { name: '👮 Yetkili', value: `<@${conv.moderatorId}> (\`${conv.moderatorId}\`)`, inline: true },
-                            { name: '📊 Puan', value: '⭐'.repeat(stars) + ` (${stars}/5)`, inline: true },
-                            { name: '💬 Yorum', value: comment }
-                        )
-                        .setTimestamp();
-
-                    await onayKanal.send({ embeds: [ratingEmbed] });
+                    await onayKanal.send({ embeds: [ratingEmbed] }).catch(() => {});
                 }
+                
+                await sendSystemLog(client, { embeds: [ratingEmbed] });
             } catch (err) {
                 console.error('[EVAL LOG] Kanal log gönderilemedi:', err.message);
             }
@@ -576,6 +899,15 @@ async function handleCustomInteraction(interaction, client) {
                     
                     conv.lastMessageFrom = 'user';
                     conversationsDb.set(interaction.user.id, conv);
+
+                    // Send system log
+                    const logEmbed = new EmbedBuilder()
+                        .setColor('#00FFFF')
+                        .setTitle('💬 Kullanıcıdan Moderatöre Mesaj (Log)')
+                        .setDescription(`**<@${interaction.user.id}>** (\`${interaction.user.id}\`), moderatör **<@${conv.moderatorId}>** (\`${conv.moderatorId}\`) kişisine cevap gönderdi.`)
+                        .addFields({ name: 'Mesaj İçeriği', value: content })
+                        .setTimestamp();
+                    await sendSystemLog(client, { embeds: [logEmbed] });
 
                     await interaction.editReply({ content: '✅ Mesajınız yetkiliye başarıyla iletildi.' });
                 } else {
@@ -628,6 +960,15 @@ async function handleCustomInteraction(interaction, client) {
 
                     conv.lastMessageFrom = 'moderator';
                     conversationsDb.set(userId, conv);
+
+                    // Send system log
+                    const logEmbed = new EmbedBuilder()
+                        .setColor('#00FF00')
+                        .setTitle('💬 Moderatörden Kullanıcıya Cevap (Log)')
+                        .setDescription(`Moderatör **<@${interaction.user.id}>** (\`${interaction.user.id}\`), kullanıcı **<@${userId}>** (\`${userId}\`) kişisine cevap gönderdi.`)
+                        .addFields({ name: 'Mesaj İçeriği', value: content })
+                        .setTimestamp();
+                    await sendSystemLog(client, { embeds: [logEmbed] });
 
                     await interaction.editReply({ content: '✅ Cevabınız kullanıcıya başarıyla iletildi.' });
                 } else {
