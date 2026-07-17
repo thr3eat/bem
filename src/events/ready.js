@@ -32,6 +32,61 @@ module.exports = {
         // Geçici ban/mute kontrolü - her dakika çalışır
         scheduler.addTask('punishment-expiry-check', () => checkExpiredPunishments(client, config), 60000);
 
+        // Roblox grup kontrolü - her dakika çalışır
+        const checkRobloxGroupStatus = async (cl) => {
+            try {
+                const JsonDatabase = require('../modules/jsonDatabase');
+                const robloxChecksDb = new JsonDatabase('robloxChecks.json');
+                const { EKO_ONAY_KANAL_ID, KAYIT_GRUP_ID } = require('../modules/constants');
+                
+                const now = Date.now();
+                const checks = robloxChecksDb.all();
+                
+                for (const userId in checks) {
+                    const entry = checks[userId];
+                    if (entry.status === 'pending' && entry.checkAt <= now) {
+                        const onayKanal = await cl.channels.fetch(EKO_ONAY_KANAL_ID).catch(() => null);
+                        if (onayKanal) {
+                            const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
+                            
+                            const formattedDate = `<t:${Math.floor(entry.registeredAt / 1000)}:f>`;
+                            const checkEmbed = new EmbedBuilder()
+                                .setColor('#0099FF')
+                                .setTitle('🤖 Roblox Grup Katılım Kontrolü')
+                                .setDescription(`<@${entry.discordUserId}> adlı kullanıcı **${formattedDate}** tarihinde Roblox grubuna katılmış ve rolü verilmiştir.\n\nHala grupta mı?`)
+                                .addFields(
+                                    { name: '👤 Roblox Adı', value: entry.robloxUsername, inline: true },
+                                    { name: '🆔 Roblox ID', value: String(entry.robloxUserId), inline: true },
+                                    { name: '🔗 Grup Linki', value: `[Gruba Git](https://www.roblox.com/communities/${KAYIT_GRUP_ID})`, inline: true }
+                                )
+                                .setTimestamp();
+                                
+                            const row = new ActionRowBuilder().addComponents(
+                                new ButtonBuilder()
+                                    .setCustomId(`roblox_still_in_group_${entry.discordUserId}`)
+                                    .setLabel('EVET HALA GRUPTA')
+                                    .setStyle(ButtonStyle.Success)
+                                    .setEmoji('✅'),
+                                new ButtonBuilder()
+                                    .setCustomId(`roblox_not_in_group_${entry.discordUserId}_${entry.robloxUserId}`)
+                                    .setLabel('HAYIR HALA GRUPTA DEĞİL')
+                                    .setStyle(ButtonStyle.Danger)
+                                    .setEmoji('❌')
+                            );
+                            
+                            await onayKanal.send({ content: `🔔 **Roblox Grup Kontrolü:** <@${entry.discordUserId}>`, embeds: [checkEmbed], components: [row] });
+                            
+                            entry.status = 'sent';
+                            robloxChecksDb.set(userId, entry);
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error('[KONTROL] Roblox grup kontrolü sırasında hata:', err.message);
+            }
+        };
+        scheduler.addTask('roblox-group-status-check', () => checkRobloxGroupStatus(client), 60000);
+
         // Kayıt ve Eko Yıldız karşılama mesajlarını kontrol et
         const { kayitKarsilamaMesajiniGonder } = require('../modules/kayitUtils');
         const { ekoKarsilamaMesajiniGonder, ekoAbonerDatabase, EKO_GUILD_ID, EKO_ROL_ID } = require('../modules/ekoUtils');

@@ -90,12 +90,35 @@ module.exports = {
             }
 
         } else if (interaction.isButton()) {
-            const { handleButtonInteraction } = require('../modules/buttonHandler');
+            const isCustom = [
+                'eko_approve_', 'eko_reject_', 'roblox_still_in_group_', 'roblox_not_in_group_',
+                'user_rate_btn', 'user_reply_btn', 'user_end_btn', 'mod_reply_btn_', 'mod_end_btn_'
+            ].some(prefix => interaction.customId.startsWith(prefix));
+
+            if (isCustom) {
+                const { handleCustomInteraction } = require('../modules/interactionHandlerExt');
+                try {
+                    await handleCustomInteraction(interaction, client);
+                } catch (error) {
+                    console.error('[❌] Özel buton hatası:', error);
+                    await interaction.reply({ content: '❌ Buton işlenirken bir hata oluştu.', flags: 64 }).catch(() => {});
+                }
+            } else {
+                const { handleButtonInteraction } = require('../modules/buttonHandler');
+                try {
+                    await handleButtonInteraction(interaction, client);
+                } catch (error) {
+                    console.error('[❌] Buton hatası:', error);
+                    await interaction.reply({ content: '❌ Buton işlenirken bir hata oluştu.', flags: 64 }).catch(() => {});
+                }
+            }
+        } else if (interaction.isModalSubmit()) {
+            const { handleCustomInteraction } = require('../modules/interactionHandlerExt');
             try {
-                await handleButtonInteraction(interaction, client);
+                await handleCustomInteraction(interaction, client);
             } catch (error) {
-                console.error('[❌] Buton hatası:', error);
-                await interaction.reply({ content: '❌ Buton işlenirken bir hata oluştu.', flags: 64 }).catch(() => {});
+                console.error('[❌] Modal hatası:', error);
+                await interaction.reply({ content: '❌ Modal işlenirken bir hata oluştu.', flags: 64 }).catch(() => {});
             }
         }
     },

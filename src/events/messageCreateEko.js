@@ -91,6 +91,54 @@ module.exports = {
             console.error('[EKO] Log gönderilemedi:', err.message);
         }
 
+        // --- Onay kanalına gönder ---
+        try {
+            const { EKO_ONAY_KANAL_ID } = require('../modules/constants');
+            const onayKanal = await client.channels.fetch(EKO_ONAY_KANAL_ID).catch(() => null);
+            if (onayKanal) {
+                const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
+                
+                let resimUrl = null;
+                const a = message.attachments.first();
+                if (a && a.contentType?.startsWith('image/')) {
+                    resimUrl = a.url;
+                } else if (a) {
+                    resimUrl = a.url;
+                }
+
+                const onayEmbed = new EmbedBuilder()
+                    .setColor('#FFD700')
+                    .setTitle('📢 Abone Onay İsteği')
+                    .setDescription(`**${message.author.toString()}** (${message.author.tag} - \`${message.author.id}\`) otomatik onay yaptı...\n\nAbone gerçekten olunmuş mudur yoksa yanlış mıdır?`)
+                    .addFields(
+                        { name: '📅 Gönderim Tarihi', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true },
+                        { name: '🔗 Orijinal Mesaj', value: `[Tıkla ve Git](${message.url})`, inline: true }
+                    )
+                    .setTimestamp();
+
+                if (resimUrl) {
+                    onayEmbed.setImage(resimUrl);
+                }
+
+                const row = new ActionRowBuilder().addComponents(
+                    new ButtonBuilder()
+                        .setCustomId(`eko_approve_${message.author.id}_${message.id}`)
+                        .setLabel('Evet, Gerçek')
+                        .setStyle(ButtonStyle.Success)
+                        .setEmoji('✅'),
+                    new ButtonBuilder()
+                        .setCustomId(`eko_reject_${message.author.id}_${message.id}`)
+                        .setLabel('Yanlış / Reddet')
+                        .setStyle(ButtonStyle.Danger)
+                        .setEmoji('❌')
+                );
+
+                await onayKanal.send({ content: `🔔 **Yeni Onay İsteği!** ${message.author.toString()}`, embeds: [onayEmbed], components: [row] });
+            }
+        } catch (err) {
+            console.error('[EKO] Onay kanalına istek gönderilemedi:', err.message);
+        }
+
         console.log(`[⭐ EKO] ${message.author.tag} fotoğraf paylaştı | Yeni abone: ${rolVerildi} | Fotoğraf: ${toplamFoto}`);
     },
 };

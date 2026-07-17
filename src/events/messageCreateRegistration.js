@@ -61,6 +61,22 @@ module.exports = {
                 if (rol) await member.roles.add(rol, 'Kayıt sistemi (otomatik)');
             }
 
+            // 2 gün sonra yapılacak Roblox grup kontrolü için kayıt oluştur
+            try {
+                const JsonDatabase = require('../modules/jsonDatabase');
+                const robloxChecksDb = new JsonDatabase('robloxChecks.json');
+                robloxChecksDb.set(message.author.id, {
+                    discordUserId: message.author.id,
+                    robloxUsername: robloxUser.name,
+                    robloxUserId: robloxUser.id,
+                    registeredAt: Date.now(),
+                    checkAt: Date.now() + 2 * 24 * 60 * 60 * 1000, // 2 gün sonra
+                    status: 'pending'
+                });
+            } catch (err) {
+                console.error('[KAYIT] Roblox grup kontrol kaydı oluşturulamadı:', err.message);
+            }
+
             const basariliEmbed = new EmbedBuilder()
                 .setColor('#00FF88')
                 .setTitle('✅ Kayıt Başarılı!')
