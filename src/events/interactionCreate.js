@@ -93,7 +93,7 @@ module.exports = {
             const isCustom = [
                 'eko_approve_', 'eko_reject_', 'roblox_still_in_group_', 'roblox_not_in_group_',
                 'user_rate_btn', 'user_reply_btn', 'user_end_btn', 'mod_reply_btn_', 'mod_end_btn_',
-                'eko_undo_', 'eko_mod_send_msg_'
+                'eko_undo_', 'eko_mod_send_msg_', 'ekocan_role_btn', 'ekocancik_role_btn'
             ].some(prefix => interaction.customId.startsWith(prefix));
 
             if (isCustom) {

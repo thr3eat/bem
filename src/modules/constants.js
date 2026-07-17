@@ -64,6 +64,7 @@ const EKO_KANAL_ID      = '1518692517955244133';
 const EKO_ROL_ID        = '1518707259633303814';
 const EKO_ONAY_KANAL_ID = '1518716530651824199';
 const SISTEM_LOG_KANAL_ID = '1527749326707888228';
+const EKOCAN_SECIM_KANAL_ID = '1518692466860101915';
 const EKO_DM_MESAJ      = "Eko Yıldız'a abone oldunuz! Aramıza hoşgeldiniz";
 
 // ============================================================
@@ -142,6 +143,7 @@ module.exports = {
     EKO_ROL_ID,
     EKO_ONAY_KANAL_ID,
     SISTEM_LOG_KANAL_ID,
+    EKOCAN_SECIM_KANAL_ID,
     EKO_DM_MESAJ,
     KAYIT_GUILD_ID,
     KAYIT_KANAL_ID,

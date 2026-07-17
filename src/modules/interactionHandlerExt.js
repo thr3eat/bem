@@ -802,6 +802,72 @@ async function handleCustomInteraction(interaction, client) {
             await interaction.showModal(modal);
             return;
         }
+
+        // --- Ekocan Ailesi Rol Seçimi ---
+        if (customId === 'ekocan_role_btn') {
+            await interaction.deferReply({ flags: 64 });
+            const member = interaction.member;
+            if (!member) {
+                return interaction.editReply({ content: '❌ Bu işlemi sadece sunucu içinde gerçekleştirebilirsiniz.' });
+            }
+
+            const guild = interaction.guild;
+            const ekocanRol = guild.roles.cache.find(r => r.name.toLowerCase() === 'ekocan');
+            const ekocancikRol = guild.roles.cache.find(r => r.name.toLowerCase() === 'ekocancık' || r.name.toLowerCase() === 'ekocancik');
+
+            if (!ekocanRol) {
+                return interaction.editReply({ content: '❌ **Ekocan** rolü sunucuda bulunamadı. Lütfen yöneticilere bildirin.' });
+            }
+
+            try {
+                if (!member.roles.cache.has(ekocanRol.id)) {
+                    await member.roles.add(ekocanRol, 'Ekocan Ailesi rol seçimi');
+                }
+
+                if (ekocancikRol && member.roles.cache.has(ekocancikRol.id)) {
+                    await member.roles.remove(ekocancikRol, 'Ekocan Ailesi rol değişimi (Ekocancık alındı)');
+                }
+
+                await interaction.editReply({ content: '🎉 **Ekocan Ailesi**\'ne katıldınız! **Ekocan** rolü üzerinize tanımlandı. 🔥' });
+            } catch (err) {
+                console.error('[EKOCAN SELECTION]', err.message);
+                await interaction.editReply({ content: '❌ Rol tanımlanırken bir hata oluştu. Lütfen tekrar deneyin.' });
+            }
+            return;
+        }
+
+        // --- Ekocancık Ailesi Rol Seçimi ---
+        if (customId === 'ekocancik_role_btn') {
+            await interaction.deferReply({ flags: 64 });
+            const member = interaction.member;
+            if (!member) {
+                return interaction.editReply({ content: '❌ Bu işlemi sadece sunucu içinde gerçekleştirebilirsiniz.' });
+            }
+
+            const guild = interaction.guild;
+            const ekocanRol = guild.roles.cache.find(r => r.name.toLowerCase() === 'ekocan');
+            const ekocancikRol = guild.roles.cache.find(r => r.name.toLowerCase() === 'ekocancık' || r.name.toLowerCase() === 'ekocancik');
+
+            if (!ekocancikRol) {
+                return interaction.editReply({ content: '❌ **Ekocancık** rolü sunucuda bulunamadı. Lütfen yöneticilere bildirin.' });
+            }
+
+            try {
+                if (!member.roles.cache.has(ekocancikRol.id)) {
+                    await member.roles.add(ekocancikRol, 'Ekocancık Ailesi rol seçimi');
+                }
+
+                if (ekocanRol && member.roles.cache.has(ekocanRol.id)) {
+                    await member.roles.remove(ekocanRol, 'Ekocancık Ailesi rol değişimi (Ekocan alındı)');
+                }
+
+                await interaction.editReply({ content: '🎉 **Ekocancık Ailesi**\'ne katıldınız! **Ekocancık** rolü üzerinize tanımlandı. ⭐' });
+            } catch (err) {
+                console.error('[EKOCANCIK SELECTION]', err.message);
+                await interaction.editReply({ content: '❌ Rol tanımlanırken bir hata oluştu. Lütfen tekrar deneyin.' });
+            }
+            return;
+        }
     }
 
     // =========================================================================

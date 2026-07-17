@@ -129,5 +129,55 @@ module.exports = {
                 console.error('[❌ EKO] Başlangıç abone rol kontrolü sırasında hata oluşti:', err);
             }
         }, 8000);
+
+        // Ekocan / Ekocancık aile seçim mesajı kontrolü
+        const sendEkocanChoiceMessage = async (cl) => {
+            try {
+                const { EKOCAN_SECIM_KANAL_ID, EKO_GUILD_ID } = require('../modules/constants');
+                const guild = await cl.guilds.fetch(EKO_GUILD_ID).catch(() => null);
+                if (!guild) return;
+                const kanal = await guild.channels.fetch(EKOCAN_SECIM_KANAL_ID).catch(() => null);
+                if (!kanal) return;
+
+                const mesajlar = await kanal.messages.fetch({ limit: 50 }).catch(() => null);
+                if (mesajlar) {
+                    const mevcut = mesajlar.find(m => m.author.id === cl.user.id && m.embeds.some(e => e.title === '📢 KARARINI VER!'));
+                    if (mevcut) {
+                        console.log('[📌 EKO] Ekocan aile seçim mesajı zaten mevcut.');
+                        return;
+                    }
+                }
+
+                const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
+                const embed = new EmbedBuilder()
+                    .setColor('#FF6600')
+                    .setTitle('📢 KARARINI VER!')
+                    .setDescription(
+                        `⚡ **EKOCAN AİLESİ Mİ?**\n` +
+                        `⚡ **EKOCANCIK AİLESİ Mİ?**\n\n` +
+                        `Tıklayarak rolü al!`
+                    )
+                    .setTimestamp();
+
+                const row = new ActionRowBuilder().addComponents(
+                    new ButtonBuilder()
+                        .setCustomId('ekocan_role_btn')
+                        .setLabel('EKOCAN')
+                        .setStyle(ButtonStyle.Success)
+                        .setEmoji('🔥'),
+                    new ButtonBuilder()
+                        .setCustomId('ekocancik_role_btn')
+                        .setLabel('EKOCANCIK')
+                        .setStyle(ButtonStyle.Primary)
+                        .setEmoji('⭐')
+                );
+
+                await kanal.send({ embeds: [embed], components: [row] });
+                console.log('[📌 EKO] Ekocan aile seçim mesajı gönderildi.');
+            } catch (err) {
+                console.error('[❌ EKO] Ekocan aile seçim mesajı gönderilemedi:', err.message);
+            }
+        };
+        setTimeout(() => sendEkocanChoiceMessage(client), 10000);
     },
 };
