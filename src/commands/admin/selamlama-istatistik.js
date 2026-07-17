@@ -8,7 +8,7 @@ const {
     MessageFlags,
 } = require('discord.js');
 const { selamlamaCooldown, kullaniciRuhuHali } = require('../../modules/stats');
-const { selamlamaDesenleri } = require('../../modules/selamlamaUtils');
+const { selamlamaTetikleyicileri } = require('../../modules/selamlamaUtils');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -19,7 +19,7 @@ module.exports = {
     async execute(interaction) {
         const cooldownSayisi = selamlamaCooldown.size;
         const ruhalSayisi    = kullaniciRuhuHali.size;
-        const desenSayisi    = selamlamaDesenleri.length;
+        const desenSayisi    = selamlamaTetikleyicileri.length;
 
         const container = new ContainerBuilder()
             .setAccentColor(0x5865F2)

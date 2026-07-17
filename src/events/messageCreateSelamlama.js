@@ -1,5 +1,5 @@
 const { Events } = require('discord.js');
-const { selamlamaDesenleri, cevapHavuzu, rastgeleCevap } = require('../modules/selamlamaUtils');
+const { selamlamaTetikleyicileri, cevapHavuzu, rastgeleCevap } = require('../modules/selamlamaUtils');
 
 const { selamlamaCooldown } = require('../modules/stats');
 const COOLDOWN_MS = 6000;
@@ -13,8 +13,8 @@ module.exports = {
         const icerik = message.content.trim().toLowerCase();
         if (!icerik) return;
 
-        // Desen eşleşmesi kontrol et
-        const eslesen = selamlamaDesenleri.find(d => d.regex.test(icerik));
+        // Desen eşleşmesi kontrol et (tam eşleşme)
+        const eslesen = selamlamaTetikleyicileri.find(d => d.kelimeler.includes(icerik));
         if (!eslesen) return;
 
         // "iyiyim" cevabı için sadece bota yanıt (reply) verdiyse çalışsın
