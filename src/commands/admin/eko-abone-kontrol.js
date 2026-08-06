@@ -34,33 +34,56 @@ module.exports = {
             ? `<t:${Math.floor(new Date(veri.lastPhotoAt).getTime() / 1000)}:R>`
             : 'Bilinmiyor';
 
-        const container = new ContainerBuilder()
-            .setAccentColor(abone ? 0xFFD700 : 0x888888)
-            .addTextDisplayComponents(
-                new TextDisplayBuilder().setContent(`## ⭐ Abone Kontrol — ${hedef.tag}`)
-            )
-            .addSeparatorComponents(
-                new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small).setDivider(true)
-            )
-            .addTextDisplayComponents(
-                new TextDisplayBuilder().setContent(
-                    `🎭 **Abone Rolü** — ${abone ? '✅ Mevcut' : '❌ Yok'}\n` +
-                    `📸 **Paylaştığı Fotoğraf** — ${veri ? veri.totalPhotos : 0}\n` +
-                    `📅 **Son Paylaşım** — ${sonPaylasim}`
-                )
-            )
-            .addSeparatorComponents(
-                new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small).setDivider(false)
-            )
-            .addTextDisplayComponents(
-                new TextDisplayBuilder().setContent(
-                    `-# Eko Yıldız Otomasyon • <t:${Math.floor(Date.now() / 1000)}:R>`
-                )
-            );
+        const { EmbedBuilder } = require('discord.js');
 
-        await interaction.reply({
-            components: [container],
-            flags: MessageFlags.IsComponentsV2 | 64,
-        });
+        const embed = new EmbedBuilder()
+            .setColor(abone ? '#FFD700' : '#888888')
+            .setTitle(`⭐ YouTube Abone Kontrol — ${hedef.tag}`)
+            .setThumbnail(hedef.displayAvatarURL({ dynamic: true, size: 256 }))
+            .addFields(
+                { name: '👤 Kullanıcı', value: `${hedef.toString()} (\`${hedef.id}\`)`, inline: true },
+                { name: '🎭 Eko Abone Rolü', value: abone ? `<@&${EKO_ROL_ID}> (✅ Mevcut)` : '❌ Rol Yok', inline: true },
+                { name: '📸 Toplam Fotoğraf', value: `${veri ? veri.totalPhotos : 0} Adet`, inline: true },
+                { name: '📅 Son Fotoğraf Tarihi', value: sonPaylasim, inline: false }
+            )
+            .setFooter({ text: 'Eko Yıldız Abone Kontrol Sistemi' })
+            .setTimestamp();
+
+        try {
+            const container = new ContainerBuilder()
+                .setAccentColor(abone ? 0xFFD700 : 0x888888)
+                .addTextDisplayComponents(
+                    new TextDisplayBuilder().setContent(`## ⭐ YouTube Abone Kontrol — ${hedef.tag}`)
+                )
+                .addSeparatorComponents(
+                    new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small).setDivider(true)
+                )
+                .addTextDisplayComponents(
+                    new TextDisplayBuilder().setContent(
+                        `🎭 **Abone Rolü (<@&${EKO_ROL_ID}>)** — ${abone ? '✅ Mevcut' : '❌ Yok'}\n` +
+                        `📸 **Paylaşılan Fotoğraf** — ${veri ? veri.totalPhotos : 0} Adet\n` +
+                        `📅 **Son Fotoğraf Paylaşımı** — ${sonPaylasim}`
+                    )
+                )
+                .addSeparatorComponents(
+                    new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small).setDivider(false)
+                )
+                .addTextDisplayComponents(
+                    new TextDisplayBuilder().setContent(
+                        `-# Eko Yıldız Otomasyon • <t:${Math.floor(Date.now() / 1000)}:R>`
+                    )
+                );
+
+            await interaction.reply({
+                components: [container],
+                embeds: [embed],
+                flags: MessageFlags.IsComponentsV2 | 64,
+            });
+        } catch {
+            await interaction.reply({
+                embeds: [embed],
+                flags: 64,
+            });
+        }
     },
 };

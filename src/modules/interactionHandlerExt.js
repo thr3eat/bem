@@ -234,14 +234,31 @@ async function handleCustomInteraction(interaction, client) {
                     robloxChecksDb.set(userId, entry);
                 }
             } catch (err) {
-                console.error(err);
+                console.error('[ROBLOX STILL IN GROUP DB HATA]', err);
+            }
+
+            // Ensure member has the group control Discord role (KAYIT_DISCORD_ROL_ID)
+            try {
+                const guild = client.guilds.cache.get(KAYIT_GUILD_ID);
+                if (guild) {
+                    const member = await guild.members.fetch(userId).catch(() => null);
+                    if (member) {
+                        const rol = guild.roles.cache.get(KAYIT_DISCORD_ROL_ID);
+                        if (rol && !member.roles.cache.has(KAYIT_DISCORD_ROL_ID)) {
+                            await member.roles.add(rol, `Roblox grup kontrolü: Grupta olduğu doğrulandı (İşlem: ${interaction.user.tag})`);
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error('[ROBLOX STILL IN GROUP ROL HATA]', err.message);
             }
 
             const oldEmbed = interaction.message.embeds[0];
             const updatedEmbed = EmbedBuilder.from(oldEmbed)
                 .setColor('#00FF88')
-                .setTitle('✅ Roblox Grup Kontrolü Başarılı')
-                .setDescription(`${oldEmbed.description}\n\nKullanıcının grupta olduğu onaylandı.\n**Onaylayan Moderatör:** ${interaction.user.toString()}`);
+                .setTitle('✅ Roblox Grup Katılımı Onaylandı')
+                .setDescription(`${oldEmbed.description.split('\n\nLütfen kullanıcının')[0]}\n\n✨ **Doğrulama Sonucu:** Kullanıcının Roblox grubunda aktif olarak yer aldığı onaylandı ve rolü korundu.\n**İşlemi Onaylayan Yetkili:** ${interaction.user.toString()} (\`${interaction.user.tag}\`)`)
+                .setTimestamp();
 
             const row = new ActionRowBuilder().addComponents(
                 new ButtonBuilder()
@@ -261,7 +278,7 @@ async function handleCustomInteraction(interaction, client) {
             const logEmbed = new EmbedBuilder()
                 .setColor('#00FF88')
                 .setTitle('✅ Roblox Grup Katılımı Onaylandı (Log)')
-                .setDescription(`**${interaction.user.tag}** adlı moderatör, **<@${userId}>** (\`${userId}\`) kullanıcısının Roblox grubunda bulunmaya devam ettiğini onayladı.`)
+                .setDescription(`**${interaction.user.tag}** adlı moderatör, **<@${userId}>** (\`${userId}\`) kullanıcısının Roblox grubunda bulunmaya devam ettiğini onayladı.\n🎭 Rol: <@&${KAYIT_DISCORD_ROL_ID}>`)
                 .setTimestamp();
             await sendSystemLog(client, { embeds: [logEmbed] });
             return;
@@ -284,7 +301,7 @@ async function handleCustomInteraction(interaction, client) {
                     robloxChecksDb.set(userId, entry);
                 }
             } catch (err) {
-                console.error(err);
+                console.error('[ROBLOX REJECT DB HATA]', err);
             }
 
             // Remove Roblox group role
@@ -321,12 +338,15 @@ async function handleCustomInteraction(interaction, client) {
             try {
                 const user = await client.users.fetch(userId).catch(() => null);
                 if (user) {
+                    const { KAYIT_GRUP_ID } = require('./constants');
                     const rejectEmbed = new EmbedBuilder()
-                        .setColor('#FF0000')
-                        .setTitle('⚠️ ROBLOX GRUBUNDA BULUNMADIĞINIZ ALGILANMIŞTIR!')
-                        .setDescription(`Roblox grubunda bulunmadığınız tespit edildiği için kayıt rolünüz **${interaction.user.tag}** adlı mod tarafından alınmıştır.\n\n` +
-                            `**Dikkat!** Eğer bir sorun varsa lütfen destek talebi (ticket) açın ve soruşturma açılmasını söyleyin.`)
-                        .setTimestamp();
+                        .setColor('#FF3333')
+                        .setTitle('⚠️ ROBLOX GRUP KAYDINIZ İPTAL EDİLDİ!')
+                        .setDescription(`Roblox grubumuzda bulunmadığınız tespit edildiği için kayıt rolünüz (<@&${KAYIT_DISCORD_ROL_ID}>) **${interaction.user.tag}** adlı yetkili tarafından geri alınmıştır.\n\n` +
+                            `🔗 **Gruba Katılmak İçin:** [Eko Yıldız Roblox Grubu](https://www.roblox.com/communities/${KAYIT_GRUP_ID})\n\n` +
+                            `💡 **Sorunuz mu var?** Aşağıdaki butonları kullanarak yetkili ile doğrudan iletişime geçebilirsiniz.`)
+                        .setTimestamp()
+                        .setFooter({ text: 'Eko Yıldız Roblox Destek Otomasyonu' });
 
                     const row = new ActionRowBuilder().addComponents(
                         new ButtonBuilder()
@@ -356,8 +376,9 @@ async function handleCustomInteraction(interaction, client) {
             const oldEmbed = interaction.message.embeds[0];
             const updatedEmbed = EmbedBuilder.from(oldEmbed)
                 .setColor('#FF0000')
-                .setTitle('❌ Roblox Grup Kontrolü - Kayıt İptal Edildi')
-                .setDescription(`${oldEmbed.description}\n\nKullanıcı grupta bulunmadığı için kaydı iptal edildi.\n**İşlemi Yapan Moderatör:** ${interaction.user.toString()}`);
+                .setTitle('❌ Roblox Grup Katılımı Reddedildi (Rol Alındı)')
+                .setDescription(`${oldEmbed.description.split('\n\nLütfen kullanıcının')[0]}\n\n⚠️ **İşlem Sonucu:** Kullanıcı grupta bulunmadığı için kaydı iptal edildi ve <@&${KAYIT_DISCORD_ROL_ID}> rolü kaldırıldı.\n**İşlemi Yapan Moderatör:** ${interaction.user.toString()} (\`${interaction.user.tag}\`)`)
+                .setTimestamp();
 
             const row = new ActionRowBuilder().addComponents(
                 new ButtonBuilder()
@@ -377,7 +398,7 @@ async function handleCustomInteraction(interaction, client) {
             const logEmbed = new EmbedBuilder()
                 .setColor('#FF0000')
                 .setTitle('❌ Roblox Grup Katılımı Reddedildi (Log)')
-                .setDescription(`**${interaction.user.tag}** adlı moderatör, **<@${userId}>** (\`${userId}\`) kullanıcısının Roblox grubunda olmadığını belirterek kaydını iptal etti ve rolünü geri aldı.`)
+                .setDescription(`**${interaction.user.tag}** adlı moderatör, **<@${userId}>** (\`${userId}\`) kullanıcısının Roblox grubunda olmadığını belirterek kaydını iptal etti ve rolünü (<@&${KAYIT_DISCORD_ROL_ID}>) geri aldı.`)
                 .setTimestamp();
             await sendSystemLog(client, { embeds: [logEmbed] });
 

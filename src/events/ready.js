@@ -37,7 +37,7 @@ module.exports = {
             try {
                 const JsonDatabase = require('../modules/jsonDatabase');
                 const robloxChecksDb = new JsonDatabase('robloxChecks.json');
-                const { EKO_ONAY_KANAL_ID, KAYIT_GRUP_ID } = require('../modules/constants');
+                const { EKO_ONAY_KANAL_ID, KAYIT_GRUP_ID, KAYIT_DISCORD_ROL_ID } = require('../modules/constants');
                 
                 const now = Date.now();
                 const checks = robloxChecksDb.all();
@@ -49,32 +49,39 @@ module.exports = {
                         if (onayKanal) {
                             const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
                             
-                            const formattedDate = `<t:${Math.floor(entry.registeredAt / 1000)}:f>`;
+                            const regTimeFormatted = `<t:${Math.floor(entry.registeredAt / 1000)}:F>`;
+                            const regRelFormatted = `<t:${Math.floor(entry.registeredAt / 1000)}:R>`;
+                            const avatarUrl = `https://www.roblox.com/headshot-thumbnail/image?userId=${entry.robloxUserId}&width=420&height=420&format=png`;
+
                             const checkEmbed = new EmbedBuilder()
-                                .setColor('#0099FF')
-                                .setTitle('🤖 Roblox Grup Katılım Kontrolü')
-                                .setDescription(`<@${entry.discordUserId}> adlı kullanıcı **${formattedDate}** tarihinde Roblox grubuna katılmış ve rolü verilmiştir.\n\nHala grupta mı?`)
+                                .setColor('#5865F2')
+                                .setTitle('🤖 Roblox Grup Üyelik Kontrolü')
+                                .setThumbnail(avatarUrl)
+                                .setDescription(`Kullanıcı <@${entry.discordUserId}> için rutin **Roblox Grup Katılım Kontrolü** zamanı geldi.\nLütfen kullanıcının Roblox grubunda bulunmaya devam edip etmediğini doğrulayın.`)
                                 .addFields(
-                                    { name: '👤 Roblox Adı', value: entry.robloxUsername, inline: true },
-                                    { name: '🆔 Roblox ID', value: String(entry.robloxUserId), inline: true },
-                                    { name: '🔗 Grup Linki', value: `[Gruba Git](https://www.roblox.com/communities/${KAYIT_GRUP_ID})`, inline: true }
+                                    { name: '👤 Discord Üyesi', value: `<@${entry.discordUserId}>\n(\`${entry.discordUserId}\`)`, inline: true },
+                                    { name: '🎮 Roblox Hesabı', value: `[${entry.robloxUsername}](https://www.roblox.com/users/${entry.robloxUserId}/profile)\n(ID: \`${entry.robloxUserId}\`)`, inline: true },
+                                    { name: '🎭 Kontrol Edilen Rol', value: `<@&${KAYIT_DISCORD_ROL_ID}>`, inline: true },
+                                    { name: '📅 Kayıt Tarihi', value: `${regTimeFormatted}\n(${regRelFormatted})`, inline: true },
+                                    { name: '🔗 Target Group', value: `[Roblox Grubuna Git](https://www.roblox.com/communities/${KAYIT_GRUP_ID})`, inline: true }
                                 )
+                                .setFooter({ text: 'Sentura • Roblox Grup Kontrol Otomasyonu', iconURL: cl.user.displayAvatarURL() })
                                 .setTimestamp();
                                 
                             const row = new ActionRowBuilder().addComponents(
                                 new ButtonBuilder()
                                     .setCustomId(`roblox_still_in_group_${entry.discordUserId}`)
-                                    .setLabel('EVET HALA GRUPTA')
+                                    .setLabel('EVET - HALA GRUPTA')
                                     .setStyle(ButtonStyle.Success)
                                     .setEmoji('✅'),
                                 new ButtonBuilder()
                                     .setCustomId(`roblox_not_in_group_${entry.discordUserId}_${entry.robloxUserId}`)
-                                    .setLabel('HAYIR HALA GRUPTA DEĞİL')
+                                    .setLabel('HAYIR - GRUPTAN AYRILMIŞ')
                                     .setStyle(ButtonStyle.Danger)
                                     .setEmoji('❌')
                             );
                             
-                            await onayKanal.send({ content: `🔔 **Roblox Grup Kontrolü:** <@${entry.discordUserId}>`, embeds: [checkEmbed], components: [row] });
+                            await onayKanal.send({ content: `🔔 **Roblox Grup Kontrol İncelemesi:** <@${entry.discordUserId}>`, embeds: [checkEmbed], components: [row] });
                             
                             entry.status = 'sent';
                             robloxChecksDb.set(userId, entry);
@@ -87,10 +94,11 @@ module.exports = {
         };
         scheduler.addTask('roblox-group-status-check', () => checkRobloxGroupStatus(client), 60000);
 
-        // Kayıt ve Eko Yıldız karşılama mesajlarını kontrol et
-        const { kayitKarsilamaMesajiniGonder } = require('../modules/kayitUtils');
+        // Kayıt ve Eko Yıldız karşılama mesajlarını ve başlangıç kanal taramasını kontrol et
+        const { kayitKarsilamaMesajiniGonder, taraveKontrolEtKayitKanali } = require('../modules/kayitUtils');
         const { ekoKarsilamaMesajiniGonder, ekoAbonerDatabase, EKO_GUILD_ID, EKO_ROL_ID } = require('../modules/ekoUtils');
         setTimeout(() => kayitKarsilamaMesajiniGonder(client), 3000);
+        setTimeout(() => taraveKontrolEtKayitKanali(client), 4000);
         setTimeout(() => ekoKarsilamaMesajiniGonder(client), 5000);
 
         // Başlangıçta eksik abone rollerini tamamlama kontrolü

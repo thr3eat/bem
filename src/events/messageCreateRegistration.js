@@ -79,25 +79,27 @@ module.exports = {
 
             const basariliEmbed = new EmbedBuilder()
                 .setColor('#00FF88')
-                .setTitle('✅ Kayıt Başarılı!')
+                .setTitle('🎉 Kayıt İşlemi Başarılı!')
                 .setThumbnail(`https://www.roblox.com/headshot-thumbnail/image?userId=${robloxUser.id}&width=420&height=420&format=png`)
-                .setDescription(`**${robloxUser.name}** başarıyla kaydedildi ve Roblox grubunda rütbe verildi! 🎉`)
+                .setDescription(`**[${robloxUser.name}](https://www.roblox.com/users/${robloxUser.id}/profile)** hesabı başarıyla doğrulandı, grupta rütbesi güncellendi ve Discord rolü tanımlandı! 🎉`)
                 .addFields(
                     { name: '👤 Roblox Adı', value: robloxUser.name, inline: true },
                     { name: '🆔 Roblox ID', value: String(robloxUser.id), inline: true },
-                    { name: '🎭 Durum', value: 'Rütbe Verildi', inline: true }
+                    { name: '🎭 Verilen Rol', value: `<@&${KAYIT_DISCORD_ROL_ID}>`, inline: true },
+                    { name: '📅 Kontrol Tarihi', value: `<t:${Math.floor((Date.now() + 2 * 24 * 60 * 60 * 1000) / 1000)}:R> (2 Gün Sonra)`, inline: false }
                 )
                 .setTimestamp()
-                .setFooter({ text: 'Eko Yıldız Kayıt Sistemi' });
+                .setFooter({ text: 'Eko Yıldız Roblox Otomatik Kayıt Sistemi' });
 
             await yukleniyor.edit({ embeds: [basariliEmbed] });
 
             const logEmbed = new EmbedBuilder()
                 .setColor('#00FF88')
-                .setTitle('✅ Yeni Kayıt Gerçekleşti')
+                .setTitle('✅ Yeni Roblox Kaydı Yapıldı (Log)')
                 .addFields(
-                    { name: '👤 Roblox', value: `${robloxUser.name} (${robloxUser.id})`, inline: true },
-                    { name: '💬 Discord', value: `${message.author.tag} (${message.author.id})`, inline: true }
+                    { name: '🎮 Roblox Hesabı', value: `[${robloxUser.name}](https://www.roblox.com/users/${robloxUser.id}/profile) (\`${robloxUser.id}\`)`, inline: true },
+                    { name: '👤 Discord Üyesi', value: `${message.author.tag} (<@${message.author.id}>)`, inline: true },
+                    { name: '🎭 Tanımlanan Rol', value: `<@&${KAYIT_DISCORD_ROL_ID}>`, inline: true }
                 )
                 .setTimestamp();
             await sendLog(client, logEmbed);

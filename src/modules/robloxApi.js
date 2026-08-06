@@ -114,14 +114,23 @@ async function getGroupMemberCount() {
 // ============================================================
 //  RANK SYSTEM — TTL Cache
 // ============================================================
+// ─── Cookie Format Helper ────────────────────────────────────
+function getCookieHeader() {
+    if (!ROBLOX_COOKIE) return '';
+    const cookie = ROBLOX_COOKIE.trim();
+    if (!cookie) return '';
+    return cookie.includes('.ROBLOSECURITY=') ? cookie : `.ROBLOSECURITY=${cookie}`;
+}
+
 async function getGroupRoles(groupId = ROBLOX_GROUP_ID) {
     const cacheKey = `roles_${groupId}`;
     const cached = groupRolesCache.get(cacheKey);
     if (cached) return cached;
 
+    const cookieHeader = getCookieHeader();
     try {
         const response = await fetchWithRetry(`https://groups.roblox.com/v1/groups/${groupId}/roles`, {
-            headers: { 'Cookie': `.ROBLOSECURITY=${ROBLOX_COOKIE}` }
+            headers: cookieHeader ? { 'Cookie': cookieHeader } : {}
         });
         if (!response.ok) throw new Error(`Grup rolleri alınamadı: ${response.status}`);
         const data = await response.json();
@@ -147,7 +156,7 @@ function invalidateGroupRolesCache(groupId = ROBLOX_GROUP_ID) {
 }
 
 // ============================================================
-//  CSRF TOKEN — TTL Cache
+//  CSRF TOKEN — TTL Cache + Multi-Endpoint Fallback
 // ============================================================
 async function getCsrfToken(forceRefresh = false) {
     if (!forceRefresh) {
@@ -155,26 +164,60 @@ async function getCsrfToken(forceRefresh = false) {
         if (cached) return cached;
     }
 
+    const cookieHeader = getCookieHeader();
+    if (!cookieHeader) {
+        throw new Error('ROBLOX_COOKIE tanımlanmamış veya boş. Lütfen ortam değişkenlerini kontrol edin.');
+    }
+
+    // 1. Birincil Endpoint: auth.roblox.com/v2/logout
     try {
         const response = await fetch('https://auth.roblox.com/v2/logout', {
             method: 'POST',
             headers: {
-                'Cookie': `.ROBLOSECURITY=${ROBLOX_COOKIE}`,
-                'Content-Length': '0'
+                'Cookie': cookieHeader,
+                'Content-Length': '0',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
             }
         });
-        const token = response.headers.get('x-csrf-token');
-        if (!token) throw new Error('CSRF token alınamadı');
-        csrfTokenCache.set('csrf', token);
-        return token;
+        const token = response.headers.get('x-csrf-token') || response.headers.get('X-CSRF-TOKEN');
+        if (token) {
+            csrfTokenCache.set('csrf', token);
+            return token;
+        }
+
+        if (response.status === 401) {
+            console.error('[❌ ROBLOX] ROBLOX_COOKIE geçersiz veya süresi dolmuş (401 Unauthorized).');
+            throw new Error('ROBLOX_COOKIE geçersiz veya süresi dolmuş.');
+        }
     } catch (err) {
-        console.error('[❌ ROBLOX] CSRF token hatası:', err.message);
-        throw err;
+        if (err.message.includes('geçersiz')) throw err;
+        console.warn('[⚠️ ROBLOX] Logout endpointinden CSRF alınamadı, yedek deneniyor:', err.message);
     }
+
+    // 2. Yedek Endpoint: catalog API
+    try {
+        const fallbackRes = await fetch('https://catalog.roblox.com/v1/catalog/items/details', {
+            method: 'POST',
+            headers: {
+                'Cookie': cookieHeader,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ items: [] })
+        });
+        const token = fallbackRes.headers.get('x-csrf-token') || fallbackRes.headers.get('X-CSRF-TOKEN');
+        if (token) {
+            csrfTokenCache.set('csrf', token);
+            return token;
+        }
+    } catch (err) {
+        console.error('[❌ ROBLOX] Yedek CSRF endpoint hatası:', err.message);
+    }
+
+    throw new Error('CSRF token alınamadı (ROBLOX_COOKIE geçerliliğini ve hesabın durumunu kontrol edin).');
 }
 
 // ============================================================
-//  SET RANK — Retry + CSRF yenileme
+//  SET RANK — Retry + 403 Otomatik CSRF Yakalama
 // ============================================================
 async function setRobloxRank(userId, rankNumber, groupId = ROBLOX_GROUP_ID) {
     const roleId = await getRoleIdByRank(rankNumber, groupId);
@@ -182,26 +225,52 @@ async function setRobloxRank(userId, rankNumber, groupId = ROBLOX_GROUP_ID) {
         throw new Error(`Rank ${rankNumber} için role ID bulunamadı.`);
     }
 
-    let csrfToken = await getCsrfToken();
+    const cookieHeader = getCookieHeader();
+    if (!cookieHeader) {
+        throw new Error('ROBLOX_COOKIE bulunamadı.');
+    }
+
+    let csrfToken;
+    try {
+        csrfToken = await getCsrfToken();
+    } catch (e) {
+        console.warn('[⚠️ ROBLOX] CSRF önceden alınamadı, istekle yanıt beklenecek:', e.message);
+    }
 
     for (let attempt = 1; attempt <= 3; attempt++) {
+        const headers = {
+            'Content-Type': 'application/json',
+            'Cookie': cookieHeader
+        };
+        if (csrfToken) {
+            headers['x-csrf-token'] = csrfToken;
+        }
+
         const response = await fetchWithRetry(`https://groups.roblox.com/v1/groups/${groupId}/users/${userId}`, {
             method: 'PATCH',
-            headers: {
-                'Content-Type': 'application/json',
-                'Cookie': `.ROBLOSECURITY=${ROBLOX_COOKIE}`,
-                'x-csrf-token': csrfToken
-            },
+            headers: headers,
             body: JSON.stringify({ roleId })
         });
 
         if (response.ok) return true;
 
         if (response.status === 403) {
-            // CSRF token geçersiz, yenile
-            console.warn('[⚠️ ROBLOX] CSRF token geçersiz, yenileniyor...');
-            csrfToken = await getCsrfToken(true);
-            continue;
+            // Roblox 403 yanıtının kendisi x-csrf-token başlığında yeni token'ı verir!
+            const returnedToken = response.headers.get('x-csrf-token') || response.headers.get('X-CSRF-TOKEN');
+            if (returnedToken) {
+                console.log(`[✅ ROBLOX] 403 yanıtından yeni CSRF token otomatik alındı (Deneme ${attempt})`);
+                csrfTokenCache.set('csrf', returnedToken);
+                csrfToken = returnedToken;
+                continue;
+            }
+
+            console.warn('[⚠️ ROBLOX] CSRF token geçersiz, zorla yenileniyor...');
+            try {
+                csrfToken = await getCsrfToken(true);
+                continue;
+            } catch (csrfErr) {
+                throw new Error(`CSRF token yenilenemedi: ${csrfErr.message}`);
+            }
         }
 
         const errText = await response.text().catch(() => 'Bilinmeyen hata');
