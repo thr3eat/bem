@@ -104,33 +104,37 @@ function ekoKanalTebrikEmbed(member, toplamFoto, yeniAbone) {
 //  KAYIT SYSTEM EMBEDS
 // ============================================================
 function kayitBasariliEmbed(robloxUser, oldRankObj, newRankObj, discordUser) {
+    const timestamp = Math.floor(Date.now() / 1000);
     return new EmbedBuilder()
         .setColor('#00FF00')
         .setTitle('✅ Kayıt Başarılı!')
+        .setDescription(`## 🎉 Roblox Hesabı Doğrulandı\n**[${robloxUser.name}](https://www.roblox.com/users/${robloxUser.id}/profile)** hesabı başarıyla eşleştirildi.\n\n-# Eko Yıldız Otomatik Kayıt Sistemi • <t:${timestamp}:R>`)
         .addFields(
-            { name: '👤 Roblox Kullanıcı', value: robloxUser.name, inline: true },
-            { name: '🆔 Roblox ID', value: String(robloxUser.id), inline: true },
-            { name: '📊 Atanan Rütbe', value: newRankObj?.name || 'Sistem Rütbesi', inline: false },
-            { name: '👮 Discord', value: `${discordUser.tag}`, inline: true }
+            { name: '👤 Roblox Kullanıcı', value: `\`${robloxUser.name}\``, inline: true },
+            { name: '🆔 Roblox ID', value: `\`${robloxUser.id}\``, inline: true },
+            { name: '📊 Atanan Rütbe', value: `**${newRankObj?.name || 'Sistem Rütbesi'}**`, inline: false },
+            { name: '👮 Discord', value: `${discordUser.tag} (<@${discordUser.id}>)`, inline: true }
         )
         .setTimestamp()
         .setFooter({ text: 'Eko Yıldız Kayıt Sistemi' });
 }
 
 function kayitHataEmbed(baslik, mesaj) {
+    const timestamp = Math.floor(Date.now() / 1000);
     return new EmbedBuilder()
         .setColor('#FF0000')
         .setTitle(`❌ ${baslik}`)
-        .setDescription(mesaj)
+        .setDescription(`### ⚠️ Bir Hata Oluştu\n${mesaj}\n\n-# İşlem Zamanı: <t:${timestamp}:R>`)
         .setTimestamp()
         .setFooter({ text: 'Eko Yıldız Kayıt Sistemi' });
 }
 
 function kayitUyariEmbed(baslik, mesaj) {
+    const timestamp = Math.floor(Date.now() / 1000);
     return new EmbedBuilder()
         .setColor('#FFA500')
         .setTitle(`⚠️ ${baslik}`)
-        .setDescription(mesaj)
+        .setDescription(`### 📢 Dikkat\n${mesaj}\n\n-# Sistem Uyarısı • <t:${timestamp}:R>`)
         .setTimestamp()
         .setFooter({ text: 'Eko Yıldız Kayıt Sistemi' });
 }

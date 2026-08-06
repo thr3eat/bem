@@ -55,12 +55,93 @@ class ComponentsV2Factory {
     }
 
     /**
-     * Create a Media Gallery grid component
+     * Create a Media Gallery grid component (Alias for createMediaGallery)
      */
     static mediaGallery(imageUrls = []) {
+        return this.createMediaGallery(imageUrls);
+    }
+
+    /**
+     * Create a Media Gallery grid component (Type 12)
+     */
+    static createMediaGallery(imageUrls = []) {
         return {
             type: TYPE_MEDIA_GALLERY,
             items: imageUrls.map(url => ({ media: { url } }))
+        };
+    }
+
+    /**
+     * Create a Section with Thumbnail accessory (Type 9 & Type 11)
+     */
+    static createSectionWithThumbnail(title, description, thumbnailUrl) {
+        return {
+            type: TYPE_SECTION,
+            text: {
+                type: TYPE_TEXT_DISPLAY,
+                content: `### ${title}\n${description}`
+            },
+            accessory: {
+                type: TYPE_THUMBNAIL,
+                media: { url: thumbnailUrl }
+            }
+        };
+    }
+
+    /**
+     * Create a standardized header block with separator
+     */
+    static createHeaderBlock(title, iconEmoji = '🚀') {
+        return [
+            {
+                type: TYPE_TEXT_DISPLAY,
+                content: `## ${iconEmoji} ${title}`
+            },
+            { type: TYPE_SEPARATOR, divider: true }
+        ];
+    }
+
+    /**
+     * QuickChart.io URL Generator for dynamic charts
+     */
+    static getQuickChartUrl(labels, data, labelName = 'Veriler', chartType = 'sparkline', color = '#5865F2') {
+        const chartConfig = {
+            type: chartType,
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: labelName,
+                    data: data,
+                    borderColor: color,
+                    fill: true,
+                    backgroundColor: 'rgba(88, 101, 242, 0.15)'
+                }]
+            },
+            options: {
+                plugins: { legend: { labels: { color: 'white' } } }
+            }
+        };
+        return `https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify(chartConfig))}&w=500&h=180&bkg=transparent`;
+    }
+
+    /**
+     * QuickChart Supported Stats Container (V2)
+     */
+    static buildChartStatsV2(data) {
+        const { title, labels, values, datasetLabel, description, accentColor = 0x5865F2 } = data;
+        const chartUrl = this.getQuickChartUrl(labels, values, datasetLabel || title);
+
+        return {
+            flags: FLAGS_V2,
+            components: [
+                this.container(accentColor, [
+                    ...this.createHeaderBlock(title, '📈'),
+                    ...(description ? [this.text(description), this.separator(false)] : []),
+                    this.createMediaGallery([chartUrl]),
+                    this.separator(false),
+                    this.text(`-# Sentura Dynamic QuickChart Service • <t:${Math.floor(Date.now() / 1000)}:R>`)
+                ])
+            ]
         };
     }
 
