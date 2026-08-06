@@ -129,28 +129,25 @@ async function taraveKontrolEtKayitKanali(client) {
 
         console.log(`[📊 KAYIT TARAMA SONUÇ] Taranan Mesaj: ${toplamMesaj} | Kullanıcı: ${islenenKullanicilar.size} | Sunucuda: ${sunucudaMevcut} | Zaten Rolü Var: ${zatenRoluOlan} | Yeni Rol Verilen: ${yeniRolVerilen}`);
 
-        // Log kanalına görsel rapor gönder
+        // Log kanalına V2 Container rapor gönder
         try {
+            const ComponentsV2Factory = require('./componentsV2Factory');
             const logKanal = await client.channels.fetch(SISTEM_LOG_KANAL_ID).catch(() => null);
             if (logKanal) {
-                const { EmbedBuilder } = require('discord.js');
-                const auditEmbed = new EmbedBuilder()
-                    .setColor('#00FF88')
-                    .setTitle('🔍 Başlangıç Kayıt Kanalı Taraması Tamamlandı')
-                    .setDescription(`Bot yeniden başlatıldığında <#${KAYIT_KANAL_ID}> kanalına yazan tüm kullanıcıların rolleri ve sunucu durumları otomatik olarak kontrol edildi.`)
-                    .addFields(
-                        { name: '📩 Taranan Mesaj', value: String(toplamMesaj), inline: true },
-                        { name: '👥 Tekil Kullanıcı', value: String(islenenKullanicilar.size), inline: true },
-                        { name: '🏠 Sunucudaki Üye', value: String(sunucudaMevcut), inline: true },
-                        { name: '🎭 Zaten Rolü Olan', value: String(zatenRoluOlan), inline: true },
-                        { name: '⚡ Yeni Rol Tanımlanan', value: String(yeniRolVerilen), inline: true },
-                        { name: '🎮 Grupta Doğrulanan', value: String(gruptaOlan), inline: true }
-                    )
-                    .setFooter({ text: 'Sentura Kayıt Taraması Otomasyonu' })
-                    .setTimestamp();
-                await logKanal.send({ embeds: [auditEmbed] });
+                const v2Payload = ComponentsV2Factory.buildAuditScanV2({
+                    toplamMesaj,
+                    tekilKullanici: islenenKullanicilar.size,
+                    sunucudaMevcut,
+                    zatenRoluOlan,
+                    yeniRolVerilen,
+                    gruptaOlan,
+                    kanalId: KAYIT_KANAL_ID
+                });
+                await logKanal.send(v2Payload);
             }
-        } catch {}
+        } catch (err) {
+            console.error('[⚠️ KAYIT V2 LOG HATA]', err.message);
+        }
     } catch (err) {
         console.error('[❌ KAYIT TARAMA HATA]', err.message);
     }

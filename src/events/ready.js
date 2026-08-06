@@ -47,41 +47,18 @@ module.exports = {
                     if (entry.status === 'pending' && entry.checkAt <= now) {
                         const onayKanal = await cl.channels.fetch(EKO_ONAY_KANAL_ID).catch(() => null);
                         if (onayKanal) {
-                            const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
-                            
-                            const regTimeFormatted = `<t:${Math.floor(entry.registeredAt / 1000)}:F>`;
-                            const regRelFormatted = `<t:${Math.floor(entry.registeredAt / 1000)}:R>`;
-                            const avatarUrl = `https://www.roblox.com/headshot-thumbnail/image?userId=${entry.robloxUserId}&width=420&height=420&format=png`;
+                            const ComponentsV2Factory = require('../modules/componentsV2Factory');
+                            const v2Payload = ComponentsV2Factory.buildRobloxGroupCheckV2({
+                                discordUserId: entry.discordUserId,
+                                robloxUsername: entry.robloxUsername,
+                                robloxUserId: entry.robloxUserId,
+                                registeredAt: entry.registeredAt,
+                                groupId: KAYIT_GRUP_ID,
+                                targetRoleId: KAYIT_DISCORD_ROL_ID
+                            });
+                            v2Payload.content = `🔔 **Roblox Grup Kontrol İncelemesi:** <@${entry.discordUserId}>`;
 
-                            const checkEmbed = new EmbedBuilder()
-                                .setColor('#5865F2')
-                                .setTitle('🤖 Roblox Grup Üyelik Kontrolü')
-                                .setThumbnail(avatarUrl)
-                                .setDescription(`Kullanıcı <@${entry.discordUserId}> için rutin **Roblox Grup Katılım Kontrolü** zamanı geldi.\nLütfen kullanıcının Roblox grubunda bulunmaya devam edip etmediğini doğrulayın.`)
-                                .addFields(
-                                    { name: '👤 Discord Üyesi', value: `<@${entry.discordUserId}>\n(\`${entry.discordUserId}\`)`, inline: true },
-                                    { name: '🎮 Roblox Hesabı', value: `[${entry.robloxUsername}](https://www.roblox.com/users/${entry.robloxUserId}/profile)\n(ID: \`${entry.robloxUserId}\`)`, inline: true },
-                                    { name: '🎭 Kontrol Edilen Rol', value: `<@&${KAYIT_DISCORD_ROL_ID}>`, inline: true },
-                                    { name: '📅 Kayıt Tarihi', value: `${regTimeFormatted}\n(${regRelFormatted})`, inline: true },
-                                    { name: '🔗 Target Group', value: `[Roblox Grubuna Git](https://www.roblox.com/communities/${KAYIT_GRUP_ID})`, inline: true }
-                                )
-                                .setFooter({ text: 'Sentura • Roblox Grup Kontrol Otomasyonu', iconURL: cl.user.displayAvatarURL() })
-                                .setTimestamp();
-                                
-                            const row = new ActionRowBuilder().addComponents(
-                                new ButtonBuilder()
-                                    .setCustomId(`roblox_still_in_group_${entry.discordUserId}`)
-                                    .setLabel('EVET - HALA GRUPTA')
-                                    .setStyle(ButtonStyle.Success)
-                                    .setEmoji('✅'),
-                                new ButtonBuilder()
-                                    .setCustomId(`roblox_not_in_group_${entry.discordUserId}_${entry.robloxUserId}`)
-                                    .setLabel('HAYIR - GRUPTAN AYRILMIŞ')
-                                    .setStyle(ButtonStyle.Danger)
-                                    .setEmoji('❌')
-                            );
-                            
-                            await onayKanal.send({ content: `🔔 **Roblox Grup Kontrol İncelemesi:** <@${entry.discordUserId}>`, embeds: [checkEmbed], components: [row] });
+                            await onayKanal.send(v2Payload);
                             
                             entry.status = 'sent';
                             robloxChecksDb.set(userId, entry);

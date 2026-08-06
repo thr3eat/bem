@@ -77,21 +77,14 @@ module.exports = {
                 console.error('[KAYIT] Roblox grup kontrol kaydı oluşturulamadı:', err.message);
             }
 
-            const basariliEmbed = new EmbedBuilder()
-                .setColor('#00FF88')
-                .setTitle('🎉 Kayıt İşlemi Başarılı!')
-                .setThumbnail(`https://www.roblox.com/headshot-thumbnail/image?userId=${robloxUser.id}&width=420&height=420&format=png`)
-                .setDescription(`**[${robloxUser.name}](https://www.roblox.com/users/${robloxUser.id}/profile)** hesabı başarıyla doğrulandı, grupta rütbesi güncellendi ve Discord rolü tanımlandı! 🎉`)
-                .addFields(
-                    { name: '👤 Roblox Adı', value: robloxUser.name, inline: true },
-                    { name: '🆔 Roblox ID', value: String(robloxUser.id), inline: true },
-                    { name: '🎭 Verilen Rol', value: `<@&${KAYIT_DISCORD_ROL_ID}>`, inline: true },
-                    { name: '📅 Kontrol Tarihi', value: `<t:${Math.floor((Date.now() + 2 * 24 * 60 * 60 * 1000) / 1000)}:R> (2 Gün Sonra)`, inline: false }
-                )
-                .setTimestamp()
-                .setFooter({ text: 'Eko Yıldız Roblox Otomatik Kayıt Sistemi' });
+            const ComponentsV2Factory = require('../modules/componentsV2Factory');
+            const v2Payload = ComponentsV2Factory.buildRegistrationSuccessV2({
+                robloxUser,
+                discordUserId: message.author.id,
+                targetRoleId: KAYIT_DISCORD_ROL_ID
+            });
 
-            await yukleniyor.edit({ embeds: [basariliEmbed] });
+            await yukleniyor.edit({ ...v2Payload, embeds: [] });
 
             const logEmbed = new EmbedBuilder()
                 .setColor('#00FF88')

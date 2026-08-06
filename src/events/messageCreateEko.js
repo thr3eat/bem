@@ -74,8 +74,14 @@ module.exports = {
         // --- Kanal içi tebrik mesajı (sadece yeni abonelere) ---
         if (rolVerildi) {
             try {
-                const tebrikEmbed = ekoKanalTebrikEmbed(member, toplamFoto, true);
-                const tebrikMesaj = await message.channel.send({ embeds: [tebrikEmbed] });
+                const ComponentsV2Factory = require('../modules/componentsV2Factory');
+                const v2Payload = ComponentsV2Factory.buildSubscriberV2({
+                    member,
+                    fotoSayi: toplamFoto,
+                    yeniAbone: true,
+                    ekoRoleId: EKO_ROL_ID
+                });
+                const tebrikMesaj = await message.channel.send(v2Payload);
                 // 15 saniye sonra tebrik mesajını sil
                 setTimeout(() => tebrikMesaj.delete().catch(() => {}), 15000);
             } catch (err) {
