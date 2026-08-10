@@ -253,11 +253,15 @@ async function handleCustomInteraction(interaction, client) {
                 console.error('[ROBLOX STILL IN GROUP ROL HATA]', err.message);
             }
 
-            const oldEmbed = interaction.message.embeds[0];
-            const updatedEmbed = EmbedBuilder.from(oldEmbed)
+            const oldEmbed = interaction.message.embeds?.[0];
+            const oldDesc = oldEmbed?.description 
+                ? oldEmbed.description.split('\n\nLütfen kullanıcının')[0]
+                : `👤 **Discord Üyesi:** <@${userId}> (\`${userId}\`)`;
+            
+            const updatedEmbed = (oldEmbed ? EmbedBuilder.from(oldEmbed) : new EmbedBuilder())
                 .setColor('#00FF88')
                 .setTitle('✅ Roblox Grup Katılımı Onaylandı')
-                .setDescription(`${oldEmbed.description.split('\n\nLütfen kullanıcının')[0]}\n\n✨ **Doğrulama Sonucu:** Kullanıcının Roblox grubunda aktif olarak yer aldığı onaylandı ve rolü korundu.\n**İşlemi Onaylayan Yetkili:** ${interaction.user.toString()} (\`${interaction.user.tag}\`)`)
+                .setDescription(`${oldDesc}\n\n✨ **Doğrulama Sonucu:** Kullanıcının Roblox grubunda aktif olarak yer aldığı onaylandı ve rolü korundu.\n**İşlemi Onaylayan Yetkili:** ${interaction.user.toString()} (\`${interaction.user.tag}\`)`)
                 .setTimestamp();
 
             const row = new ActionRowBuilder().addComponents(
@@ -373,11 +377,15 @@ async function handleCustomInteraction(interaction, client) {
             }
 
             // Update moderator channel message
-            const oldEmbed = interaction.message.embeds[0];
-            const updatedEmbed = EmbedBuilder.from(oldEmbed)
+            const oldEmbed = interaction.message.embeds?.[0];
+            const oldDesc = oldEmbed?.description
+                ? oldEmbed.description.split('\n\nLütfen kullanıcının')[0]
+                : `👤 **Discord Üyesi:** <@${userId}> (\`${userId}\`)`;
+
+            const updatedEmbed = (oldEmbed ? EmbedBuilder.from(oldEmbed) : new EmbedBuilder())
                 .setColor('#FF0000')
                 .setTitle('❌ Roblox Grup Katılımı Reddedildi (Rol Alındı)')
-                .setDescription(`${oldEmbed.description.split('\n\nLütfen kullanıcının')[0]}\n\n⚠️ **İşlem Sonucu:** Kullanıcı grupta bulunmadığı için kaydı iptal edildi ve <@&${KAYIT_DISCORD_ROL_ID}> rolü kaldırıldı.\n**İşlemi Yapan Moderatör:** ${interaction.user.toString()} (\`${interaction.user.tag}\`)`)
+                .setDescription(`${oldDesc}\n\n⚠️ **İşlem Sonucu:** Kullanıcı grupta bulunmadığı için kaydı iptal edildi ve <@&${KAYIT_DISCORD_ROL_ID}> rolü kaldırıldı.\n**İşlemi Yapan Moderatör:** ${interaction.user.toString()} (\`${interaction.user.tag}\`)`)
                 .setTimestamp();
 
             const row = new ActionRowBuilder().addComponents(

@@ -32,12 +32,14 @@ module.exports = {
         // Geçici ban/mute kontrolü - her dakika çalışır
         scheduler.addTask('punishment-expiry-check', () => checkExpiredPunishments(client, config), 60000);
 
-        // Roblox grup kontrolü - her dakika çalışır
+        // Roblox grup kontrolü - her dakika çalışır (Otomatik Canlı Kontrol & Hata Toleranslı safeSend)
         const checkRobloxGroupStatus = async (cl) => {
             try {
                 const JsonDatabase = require('../modules/jsonDatabase');
                 const robloxChecksDb = new JsonDatabase('robloxChecks.json');
                 const { EKO_ONAY_KANAL_ID, KAYIT_GRUP_ID, KAYIT_DISCORD_ROL_ID } = require('../modules/constants');
+                const { getUserRankInGroup } = require('../modules/robloxApi');
+                const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
                 
                 const now = Date.now();
                 const checks = robloxChecksDb.all();
@@ -48,6 +50,21 @@ module.exports = {
                         const onayKanal = await cl.channels.fetch(EKO_ONAY_KANAL_ID).catch(() => null);
                         if (onayKanal) {
                             const ComponentsV2Factory = require('../modules/componentsV2Factory');
+                            
+                            // 1️⃣ Otomatik Canlı Roblox Üyelik Kontrolü
+                            let liveGroupStatusText = '🔍 Canlı üyelik kontrol ediliyor...';
+                            try {
+                                const rankData = await getUserRankInGroup(entry.robloxUserId, KAYIT_GRUP_ID);
+                                if (rankData && rankData.rank > 0) {
+                                    liveGroupStatusText = `🟢 **Roblox Canlı Durum:** Grupta Üye (\`${rankData.name}\` - Rank: ${rankData.rank})`;
+                                } else {
+                                    liveGroupStatusText = `🔴 **Roblox Canlı Durum:** Gruptan Ayrılmış! (Rank: 0)`;
+                                }
+                            } catch (apiErr) {
+                                liveGroupStatusText = `⚠️ **Roblox Canlı Durum:** API Sorgulanamadı (${apiErr.message})`;
+                            }
+
+                            // 2️⃣ Primary V2 Payload
                             const v2Payload = ComponentsV2Factory.buildRobloxGroupCheckV2({
                                 discordUserId: entry.discordUserId,
                                 robloxUsername: entry.robloxUsername,
@@ -56,11 +73,43 @@ module.exports = {
                                 groupId: KAYIT_GRUP_ID,
                                 targetRoleId: KAYIT_DISCORD_ROL_ID
                             });
-                            v2Payload.content = `🔔 **Roblox Grup Kontrol İncelemesi:** <@${entry.discordUserId}>`;
+                            v2Payload.content = `🔔 **Roblox Grup Kontrol İncelemesi:** <@${entry.discordUserId}>\n${liveGroupStatusText}`;
 
-                            await onayKanal.send(v2Payload);
+                            // 3️⃣ Guaranteed Fallback Embed Payload
+                            const regTimeF = `<t:${Math.floor(entry.registeredAt / 1000)}:F>`;
+                            const regTimeR = `<t:${Math.floor(entry.registeredAt / 1000)}:R>`;
+                            const fallbackEmbed = new EmbedBuilder()
+                                .setColor('#5865F2')
+                                .setTitle('🤖 Roblox Grup Katılım Kontrolü')
+                                .setDescription(
+                                    `Kullanıcı <@${entry.discordUserId}> için rutin **Roblox Grup Üyelik Kontrolü** zamanı geldi.\n\n` +
+                                    `${liveGroupStatusText}\n\n` +
+                                    `👤 **Discord Üyesi:** <@${entry.discordUserId}> (\`${entry.discordUserId}\`)\n` +
+                                    `🎮 **Roblox Hesabı:** [${entry.robloxUsername}](https://www.roblox.com/users/${entry.robloxUserId}/profile) (\`ID: ${entry.robloxUserId}\`)\n` +
+                                    `🎭 **Hedef Rol:** <@&${KAYIT_DISCORD_ROL_ID}>\n` +
+                                    `📅 **Kayıt Tarihi:** ${regTimeF} (${regTimeR})\n` +
+                                    `🔗 **Roblox Grubu:** [Gruba Git](https://www.roblox.com/communities/${KAYIT_GRUP_ID})`
+                                )
+                                .setThumbnail(`https://www.roblox.com/headshot-thumbnail/image?userId=${entry.robloxUserId}&width=420&height=420&format=png`)
+                                .setFooter({ text: 'Sentura Otomatik Hata Toleranslı Grup Kontrolü' })
+                                .setTimestamp();
+
+                            const fallbackRow = new ActionRowBuilder().addComponents(
+                                new ButtonBuilder().setCustomId(`roblox_still_in_group_${entry.discordUserId}`).setLabel('EVET - HALA GRUPTA').setStyle(ButtonStyle.Success).setEmoji('✅'),
+                                new ButtonBuilder().setCustomId(`roblox_not_in_group_${entry.discordUserId}_${entry.robloxUserId}`).setLabel('HAYIR - GRUPTAN AYRILMIŞ').setStyle(ButtonStyle.Danger).setEmoji('❌')
+                            );
+
+                            const fallbackPayload = {
+                                content: `🔔 **Roblox Grup Kontrol İncelemesi:** <@${entry.discordUserId}>`,
+                                embeds: [fallbackEmbed],
+                                components: [fallbackRow]
+                            };
+
+                            // 4️⃣ Otomatik Fixleme & Self-Healing Gönderimi (safeSend)
+                            await ComponentsV2Factory.safeSend(onayKanal, v2Payload, fallbackPayload);
                             
                             entry.status = 'sent';
+                            entry.lastCheckedAt = now;
                             robloxChecksDb.set(userId, entry);
                         }
                     }

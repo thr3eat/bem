@@ -41,9 +41,10 @@ class ComponentsV2Factory {
      * Create a Section with optional right accessory (thumbnail/image)
      */
     static section(textContent, imageUrl = null) {
+        const textObj = typeof textContent === 'string' ? this.text(textContent) : textContent;
         const sec = {
             type: TYPE_SECTION,
-            text: typeof textContent === 'string' ? this.text(textContent) : textContent
+            components: Array.isArray(textObj) ? textObj : [textObj]
         };
         if (imageUrl) {
             sec.accessory = {
@@ -77,10 +78,12 @@ class ComponentsV2Factory {
     static createSectionWithThumbnail(title, description, thumbnailUrl) {
         return {
             type: TYPE_SECTION,
-            text: {
-                type: TYPE_TEXT_DISPLAY,
-                content: `### ${title}\n${description}`
-            },
+            components: [
+                {
+                    type: TYPE_TEXT_DISPLAY,
+                    content: `### ${title}\n${description}`
+                }
+            ],
             accessory: {
                 type: TYPE_THUMBNAIL,
                 media: { url: thumbnailUrl }
@@ -151,15 +154,19 @@ class ComponentsV2Factory {
     static actionRow(buttons = []) {
         return {
             type: TYPE_ACTION_ROW,
-            components: buttons.map(btn => ({
-                type: TYPE_BUTTON,
-                style: btn.style || ButtonStyle.Primary,
-                label: btn.label,
-                custom_id: btn.custom_id || btn.customId,
-                url: btn.url,
-                disabled: btn.disabled || false,
-                emoji: btn.emoji
-            }))
+            components: buttons.map(btn => {
+                const b = {
+                    type: TYPE_BUTTON,
+                    style: btn.style || ButtonStyle.Primary,
+                    label: btn.label,
+                    disabled: Boolean(btn.disabled)
+                };
+                const cid = btn.custom_id || btn.customId;
+                if (cid) b.custom_id = cid;
+                if (btn.url) b.url = btn.url;
+                if (btn.emoji) b.emoji = btn.emoji;
+                return b;
+            })
         };
     }
 
@@ -306,6 +313,41 @@ class ComponentsV2Factory {
                 ])
             ]
         };
+    }
+
+    /**
+     * Otomatik Hata Düzeltme & Fallback Gönderici (Auto-Fix & Self-Healing Send)
+     * Discord API bileşen hatalarında (Invalid Form Body vb.) otomatik olarak Embed fallback mesajına düşer.
+     */
+    static async safeSend(target, v2Payload, fallbackPayload = null, isEdit = false) {
+        try {
+            if (isEdit) {
+                return await target.edit(v2Payload);
+            } else {
+                return await target.send(v2Payload);
+            }
+        } catch (err) {
+            console.warn(`[⚠️ AUTO-FIX SİSTEMİ] V2 Payload gönderimi başarısız oldu (${err.message}). Otomatik Embed Fallback devreye giriyor...`);
+            if (!fallbackPayload) {
+                const { EmbedBuilder } = require('discord.js');
+                const defaultEmbed = new EmbedBuilder()
+                    .setColor('#FF9900')
+                    .setTitle('🔔 Sistem Bildirimi (Otomatik Fallback Modu)')
+                    .setDescription(v2Payload.content || 'Bileşen gösteriminde hata oluştu. Varsayılan görünüm yüklendi.')
+                    .setTimestamp();
+                fallbackPayload = { content: v2Payload.content || null, embeds: [defaultEmbed], components: [] };
+            }
+            try {
+                if (isEdit) {
+                    return await target.edit(fallbackPayload);
+                } else {
+                    return await target.send(fallbackPayload);
+                }
+            } catch (fallbackErr) {
+                console.error('[❌ AUTO-FIX HATA] Embed Fallback de gönderilemedi:', fallbackErr.message);
+                throw fallbackErr;
+            }
+        }
     }
 }
 
