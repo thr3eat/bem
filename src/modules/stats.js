@@ -14,5 +14,6 @@ function hgGunlukSifirla() {
 
 const selamlamaCooldown = new Map();
 const kullaniciRuhuHali = new Map();
+let selamlamaDurum = { aktif: true };
 
-module.exports = { hgIstatistik, hgGunlukSifirla, selamlamaCooldown, kullaniciRuhuHali };
+module.exports = { hgIstatistik, hgGunlukSifirla, selamlamaCooldown, kullaniciRuhuHali, selamlamaDurum };

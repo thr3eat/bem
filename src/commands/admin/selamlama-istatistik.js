@@ -7,7 +7,7 @@ const {
     SeparatorSpacingSize,
     MessageFlags,
 } = require('discord.js');
-const { selamlamaCooldown, kullaniciRuhuHali } = require('../../modules/stats');
+const { selamlamaCooldown, kullaniciRuhuHali, selamlamaDurum } = require('../../modules/stats');
 const { selamlamaTetikleyicileri } = require('../../modules/selamlamaUtils');
 
 module.exports = {
@@ -20,6 +20,7 @@ module.exports = {
         const cooldownSayisi = selamlamaCooldown.size;
         const ruhalSayisi    = kullaniciRuhuHali.size;
         const desenSayisi    = selamlamaTetikleyicileri.length;
+        const durumText      = selamlamaDurum.aktif ? '🟢 Aktif' : '🔴 Durduruldu (!durma)';
 
         const container = new ContainerBuilder()
             .setAccentColor(0x5865F2)
@@ -33,6 +34,7 @@ module.exports = {
             )
             .addTextDisplayComponents(
                 new TextDisplayBuilder().setContent(
+                    `⚙️ **Sistem Durumu** — ${durumText}\n` +
                     `⏱️ **Aktif Cooldown** — ${cooldownSayisi} kullanıcı\n` +
                     `😊 **Takip Edilen Ruh Hali** — ${ruhalSayisi} kullanıcı\n` +
                     `📊 **Tanımlı Selamlama Deseni** — ${desenSayisi} desen\n` +
