@@ -68,20 +68,9 @@ for (const filePath of commandFiles) {
 // Events are loaded automatically from the events folder.
 
 // ============================================================
-//  PROCESS ERROR HANDLING (24/7 STABILITY)
+//  SELF-HEALING & AUTOMATIC ERROR RECOVERY ENGINE
 // ============================================================
-process.on('unhandledRejection', (reason, promise) => {
-    console.error('[⚠️ UNHANDLED REJECTION]', reason);
-});
-process.on('uncaughtException', (err, origin) => {
-    console.error('[❌ UNCAUGHT EXCEPTION]', err);
-});
-
-// ============================================================
-//  START BOT
-// ============================================================
-const PORT = process.env.PORT || config.PORT || 3000;
-startApi(PORT);
+const selfHealing = require('./modules/selfHealing');
 
 const loginWithRetry = () => {
     client.login(process.env.DISCORD_TOKEN || TOKEN).catch(err => {
@@ -89,4 +78,13 @@ const loginWithRetry = () => {
         setTimeout(loginWithRetry, 10000);
     });
 };
+
+selfHealing.init(client, loginWithRetry);
+
+// ============================================================
+//  START BOT
+// ============================================================
+const PORT = process.env.PORT || config.PORT || 3000;
+startApi(PORT);
+
 loginWithRetry();

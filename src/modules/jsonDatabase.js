@@ -13,16 +13,9 @@ class JsonDatabase {
     _load() {
         const dir = path.dirname(this.filePath);
         if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-        if (!fs.existsSync(this.filePath)) {
-            fs.writeFileSync(this.filePath, JSON.stringify({}, null, 4));
-            return {};
-        }
-        try {
-            return JSON.parse(fs.readFileSync(this.filePath, 'utf8'));
-        } catch (err) {
-            console.error(`[❌ DB] ${this.filePath} yüklenemedi:`, err);
-            return {};
-        }
+
+        const selfHealing = require('./selfHealing');
+        return selfHealing.safeReadJson(this.filePath);
     }
 
     // Debounced async atomik yazma
