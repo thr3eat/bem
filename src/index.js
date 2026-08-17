@@ -4,7 +4,6 @@ const {
 const fs = require('fs');
 const path = require('path');
 const { config, TOKEN } = require('./modules/constants');
-const VoiceManager = require('./modules/voiceManager');
 const { startApi } = require('./api');
 const { checkExpiredPunishments } = require('./modules/moderationUtils');
 
@@ -21,7 +20,6 @@ const client = new Client({
 
 client.commands = new Collection();
 client.cooldowns = new Collection();
-client.voiceManager = new VoiceManager(client);
 
 // ============================================================
 //  LOAD EVENTS

@@ -23,12 +23,6 @@ module.exports = {
             await getGroupRoles();
         }
 
-        // Ses sistemini başlat
-        setTimeout(() => {
-            client.voiceManager.connect();
-            scheduler.addTask('voice-connection-check', () => client.voiceManager.checkConnection(), client.voiceManager.SES_YENILE_MS);
-        }, 5000);
-
         // Geçici ban/mute kontrolü - her dakika çalışır
         scheduler.addTask('punishment-expiry-check', () => checkExpiredPunishments(client, config), 60000);
 
