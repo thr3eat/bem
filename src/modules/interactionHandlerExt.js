@@ -18,6 +18,7 @@ const {
 } = require('./constants');
 
 const conversationsDb = new JsonDatabase('conversations.json');
+const { recordModApproval, recordModRejection } = require('./modStatsUtils');
 
 /**
  * Helper to send log messages to the system log channel.
@@ -83,6 +84,8 @@ async function handleCustomInteraction(interaction, client) {
             const parts = customId.split('_');
             const userId = parts[2];
             
+            recordModApproval(interaction.user.id);
+            
             // Send thank you message in the channel and update approval post
             const oldEmbed = interaction.message.embeds[0];
             const updatedEmbed = EmbedBuilder.from(oldEmbed)
@@ -118,6 +121,8 @@ async function handleCustomInteraction(interaction, client) {
         if (customId.startsWith('eko_reject_')) {
             const parts = customId.split('_');
             const userId = parts[2];
+
+            recordModRejection(interaction.user.id);
 
             // Defer reply immediately so the interaction doesn't expire
             await interaction.deferReply({ flags: 64 });

@@ -26,6 +26,10 @@ module.exports = {
         // Geçici ban/mute kontrolü - her dakika çalışır
         scheduler.addTask('punishment-expiry-check', () => checkExpiredPunishments(client, config), 60000);
 
+        // Haftalık Moderatör Liderlik Raporu kontrolü - her saat başı çalışır (7 gün tamamlandığında otomatik kanala atar)
+        const { publishWeeklyReport } = require('../modules/modStatsUtils');
+        scheduler.addTask('weekly-mod-stats-report', () => publishWeeklyReport(client), 3600000);
+
         // Roblox grup kontrolü - her dakika çalışır (Otomatik Canlı Kontrol & Hata Toleranslı safeSend)
         const checkRobloxGroupStatus = async (cl) => {
             try {

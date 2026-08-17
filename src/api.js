@@ -12,6 +12,15 @@ const status = {
 // Roblox sunucularından gelen verileri saklamak için
 const robloxServers = new Map();
 
+// Cronjob & Render Keep-Alive Endpoints (24/7 Uptime)
+app.get(['/', '/ping', '/health'], (req, res) => {
+    res.status(200).json({
+        status: 'online',
+        uptime: Math.floor(process.uptime()),
+        timestamp: new Date().toISOString()
+    });
+});
+
 app.get('/check-status', (req, res) => {
     res.json({ 
         open: status.isGameOpen, 
@@ -54,7 +63,19 @@ app.post('/update-adalet', (req, res) => {
 });
 
 const startApi = (port) => {
-    app.listen(port, () => console.log(`API ${port} portunda aktif.`));
+    app.listen(port, '0.0.0.0', () => {
+        console.log(`[🌐 API] 24/7 Web servisi ve Keep-Alive endpointleri ${port} portunda (0.0.0.0) aktif.`);
+    });
+
+    // Otomatik Self-Ping (Render URL tanımlı ise her 5 dakikada bir kendini pingler)
+    const selfUrl = process.env.RENDER_EXTERNAL_URL || process.env.PROJECT_URL;
+    if (selfUrl) {
+        setInterval(() => {
+            fetch(`${selfUrl}/ping`)
+                .then(() => console.log('[🔄 KEEP-ALIVE] Self-ping başarılı.'))
+                .catch(err => console.warn('[⚠️ KEEP-ALIVE] Self-ping hatası:', err.message));
+        }, 5 * 60 * 1000);
+    }
 };
 
 module.exports = { status, startApi, robloxServers };

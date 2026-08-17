@@ -11,11 +11,10 @@ module.exports = {
             .setDescription('Sentura 🦸 ekoyildiz Bot komut listesi')
             .addFields(
                 { name: '🛡️ Moderasyon', value: '`/ban`, `/tempban`, `/kick`, `/mute`, `/tempmute`, `/unban`, `/unmute`, `/warn`, `/clear`, `/slowmode`, `/lock`, `/unlock`, `/modlog`', inline: false },
-                { name: '🎮 Yönetim', value: '`/oyun-yonet`, `/market-yonet`, `/adaletsarayi-yonet`, `/tumunu-ac`, `/tumunu-kapat`, `/durum`', inline: false },
-                { name: '⭐ Roblox', value: '`/terfi`, `/tenzil`, `/rutbebak`, `/rutbelist`, `/roblox-kick`, `/roblox-list`', inline: false },
+                { name: '🎮 Yönetim', value: '`/oyun-yonet`, `/market-yonet`, `/adaletsarayi-yonet`, `/tumunu-ac`, `/tumunu-kapat`, `/sistem-kontrol`', inline: false },
+                { name: '⭐ Roblox', value: '`/terfi`, `/tenzil`, `/rutbebak`, `/rutbelist`', inline: false },
                 { name: '📊 Genel', value: '`/anket`, `/ping`, `/yardim`, `/avatar`, `/bot`, `/sunucu`, `/kullanici`, `/duyuru`, `/nick`', inline: false },
-                { name: '🔊 Ses', value: '`/ses-durum`, `/ses-yenile`, `/ses-baslat`, `/ses-durdur`', inline: false },
-                { name: '📈 İstatistik', value: '`/eko-istatistik`, `/hg-istatistik`, `/selamlama-istatistik`', inline: false }
+                { name: '📈 İstatistik', value: '`/eko-istatistik`, `/mod-istatistik`, `/hg-istatistik`, `/selamlama-istatistik`', inline: false }
             )
             .setTimestamp()
             .setFooter({ text: 'Sentura 🦸 ekoyildiz' });

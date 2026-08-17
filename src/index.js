@@ -68,6 +68,16 @@ for (const filePath of commandFiles) {
 // Events are loaded automatically from the events folder.
 
 // ============================================================
+//  PROCESS ERROR HANDLING (24/7 STABILITY)
+// ============================================================
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('[⚠️ UNHANDLED REJECTION]', reason);
+});
+process.on('uncaughtException', (err, origin) => {
+    console.error('[❌ UNCAUGHT EXCEPTION]', err);
+});
+
+// ============================================================
 //  START BOT
 // ============================================================
 const PORT = process.env.PORT || config.PORT || 3000;
