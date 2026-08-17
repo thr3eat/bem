@@ -83,6 +83,10 @@ process.on('uncaughtException', (err, origin) => {
 const PORT = process.env.PORT || config.PORT || 3000;
 startApi(PORT);
 
-client.login(process.env.DISCORD_TOKEN || TOKEN).catch(err => {
-    console.error('[❌] Login failed:', err);
-});
+const loginWithRetry = () => {
+    client.login(process.env.DISCORD_TOKEN || TOKEN).catch(err => {
+        console.error('[❌] Discord bağlantısı kurulamadı, 10 saniye sonra tekrar bağlanılacak:', err.message);
+        setTimeout(loginWithRetry, 10000);
+    });
+};
+loginWithRetry();
